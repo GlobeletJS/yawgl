@@ -4,9 +4,8 @@ An extremely lightweight library to hide some of the verbosity of the
 native WebGL API.
 
 Most of the methods were developed while working through the excellent
-[WebGL Fundamentals] lessons. Many of them closely follow greggman's module:
-https://github.com/greggman/webgl-fundamentals
-        /blob/master/webgl/resources/webgl-utils.js
+[WebGL Fundamentals] lessons. Many of them closely follow [greggman's module]
+from that site.
 
 ## Why Yet Another Library?
 There are already [lots of WebGL libraries], including [TWGL] from the great
@@ -32,6 +31,7 @@ them yet, your best options are to either:
 - Use a more complete library like [three.js]
 
 [WebGL Fundamentals]: https://webglfundamentals.org/
+[greggman's module]: https://github.com/greggman/webgl-fundamentals/blob/master/webgl/resources/webgl-utils.js
 [lots of WebGL libraries]: https://gist.github.com/dmnsgn/76878ba6903cf15789b712464875cfdc
 [TWGL]: https://github.com/greggman/twgl.js
 [rollup]: https://rollupjs.org/guide/en
