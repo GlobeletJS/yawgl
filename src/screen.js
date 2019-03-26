@@ -23,7 +23,7 @@ export function initScreen(canvas, fieldOfView) {
     },
   };
 
-  function resize(altitude, context) {
+  function resize(context) {
     // Make sure the canvas drawingbuffer is the same size as the display
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
     width = context.clientWidth;
