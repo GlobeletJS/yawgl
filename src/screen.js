@@ -13,7 +13,7 @@ export function initScreen(canvas, fieldOfView) {
 
   return {
     canvas, // Back-reference
-    resize,
+    resized,
     getRayParams,
     maxRay, // TODO: is it good to expose local state?
     topEdge: function() {

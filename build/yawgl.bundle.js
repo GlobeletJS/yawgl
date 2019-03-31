@@ -254,7 +254,7 @@ function initScreen(canvas, fieldOfView) {
 
   return {
     canvas, // Back-reference
-    resize,
+    resized,
     getRayParams,
     maxRay, // TODO: is it good to expose local state?
     topEdge: function() {
@@ -264,6 +264,28 @@ function initScreen(canvas, fieldOfView) {
       return maxRay[0]; // aspect * tanFOV
     },
   };
+
+  function resized() {
+    // Make sure the canvas drawingbuffer is the same size as the display
+    // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
+    aspect = width / height;
+    maxRay[0] = aspect * tanFOV;
+
+    // NOTE: for 3D geometries, we would need to update a projection matrix...
+
+    if (canvas.width !== width || canvas.height !== height) {
+      // Resize drawingbuffer to match resized display
+      canvas.width = width;
+      canvas.height = height;
+      // Update coordinate system relative to browser window
+      rect = canvas.getBoundingClientRect();
+      // Let the calling program know the canvas was resized
+      return true;
+    }
+    return false;
+  }
 
   // Convert an event position on the screen into tangents of the angles
   // (relative to screen normal) of a ray shooting off into the 3D space
