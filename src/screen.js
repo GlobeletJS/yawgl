@@ -12,9 +12,10 @@ export function initScreen(canvas, fieldOfView) {
   var rect = canvas.getBoundingClientRect();
 
   return {
+    canvas, // Back-reference
     resize,
     getRayParams,
-    maxRay,
+    maxRay, // TODO: is it good to expose local state?
     topEdge: function() {
       return maxRay[1]; // tanFOV
     },
