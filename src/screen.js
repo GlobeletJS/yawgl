@@ -24,22 +24,22 @@ export function initScreen(canvas, fieldOfView) {
     },
   };
 
-  function resize(context) {
+  function resized() {
     // Make sure the canvas drawingbuffer is the same size as the display
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    width = context.clientWidth;
-    height = context.clientHeight;
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
     aspect = width / height;
     maxRay[0] = aspect * tanFOV;
 
     // NOTE: for 3D geometries, we would need to update a projection matrix...
 
-    if (context.width !== width || context.height !== height) {
+    if (canvas.width !== width || canvas.height !== height) {
       // Resize drawingbuffer to match resized display
-      context.width = width;
-      context.height = height;
+      canvas.width = width;
+      canvas.height = height;
       // Update coordinate system relative to browser window
-      rect = context.getBoundingClientRect();
+      rect = canvas.getBoundingClientRect();
       // Let the calling program know the canvas was resized
       return true;
     }

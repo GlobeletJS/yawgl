@@ -265,28 +265,6 @@ function initScreen(canvas, fieldOfView) {
     },
   };
 
-  function resize(context) {
-    // Make sure the canvas drawingbuffer is the same size as the display
-    // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    width = context.clientWidth;
-    height = context.clientHeight;
-    aspect = width / height;
-    maxRay[0] = aspect * tanFOV;
-
-    // NOTE: for 3D geometries, we would need to update a projection matrix...
-
-    if (context.width !== width || context.height !== height) {
-      // Resize drawingbuffer to match resized display
-      context.width = width;
-      context.height = height;
-      // Update coordinate system relative to browser window
-      rect = context.getBoundingClientRect();
-      // Let the calling program know the canvas was resized
-      return true;
-    }
-    return false;
-  }
-
   // Convert an event position on the screen into tangents of the angles
   // (relative to screen normal) of a ray shooting off into the 3D space
   function getRayParams(evnt) {
