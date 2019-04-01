@@ -22,11 +22,12 @@ export function initTexture(gl, data) {
 
   return {
     sampler: texture,
-    update,
+    updatePartial,
     replace,
+    update,
   }
 
-  function update( image ) {
+  function updatePartial( image ) {
     // Updates a portion of the texture with the supplied image data.
     gl.bindTexture(target, texture);
     
@@ -47,6 +48,16 @@ export function initTexture(gl, data) {
     gl.texImage2D(target, level, internalFormat, srcFormat, srcType, image);
 
     // Re-do mipmap setup, since width/height may have changed
+    setupMipMaps(gl, target, image.width, image.height);
+    return;
+  }
+
+  function update( image ) {
+    // Re-fills the texture with the supplied image data,
+    // ASSUMING the image and texture are the same size
+    gl.bindTexture(target, texture);
+    gl.texSubImage2D(target, level, 0, 0, srcFormat, srcType, image);
+
     setupMipMaps(gl, target, image.width, image.height);
     return;
   }
