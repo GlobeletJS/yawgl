@@ -7,6 +7,10 @@ export {
   initScreen 
 } from "./screen.js";
 
+export {
+  initQuadBuffers
+} from "./quadBuffers.js";
+
 export { 
   initTexture, 
   initTiledTexture, 
