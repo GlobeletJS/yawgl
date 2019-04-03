@@ -1,19 +1,21 @@
 export { 
   initShaderProgram, 
-  drawScene 
+  drawScene,
+  drawOver,
+  clearRect,
 } from "./utils.js";
 
 export { 
-  initScreen 
+  initScreen,
 } from "./screen.js";
 
 export {
-  initQuadBuffers
+  initQuadBuffers,
 } from "./quadBuffers.js";
 
 export { 
   initTexture, 
   initTiledTexture, 
   loadTexture, 
-  loadCubeMapTexture 
+  loadCubeMapTexture,
 } from "./textures.js";

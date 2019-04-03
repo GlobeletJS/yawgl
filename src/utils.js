@@ -85,3 +85,36 @@ function prepCanvas(gl) {
 
   return;
 }
+
+export function drawOver( gl, programInfo, buffers, uniforms ) {
+  // Overwrite whatever is on the canvas, without clearing anything
+
+  // Tell WebGL how to convert from clip space to pixels
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+  // Set up program, attributes, and uniforms
+  gl.useProgram(programInfo.program);
+  setBuffersAndAttributes( gl, programInfo.attributeSetters, buffers );
+  setUniforms( programInfo.uniformSetters, uniforms );
+
+  // Draw the scene
+  gl.drawElements( gl.TRIANGLES, buffers.indices.vertexCount,
+      buffers.indices.type, buffers.indices.offset );
+
+  return;
+}
+
+export function clearRect(gl, x, y, width, height) {
+  // Set some parameters
+  gl.clearColor(0.0, 0.0, 0.0, 0.0); // Clear to transparent black
+  gl.clearDepth(1.0);
+
+  // Use scissor to constrain clearing. 
+  // See https://stackoverflow.com/a/11545738/10082269
+  gl.enable(gl.SCISSOR_TEST);
+  gl.scissor(x, y, width, height);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.disable(gl.SCISSOR_TEST);
+
+  return;
+}
