@@ -2,14 +2,14 @@
   "name": "yawgl",
   "version": "0.0.1",
   "description": "Yet Another WebGL Library",
-  "main": "build/yawgl.bundle.js",
+  "main": "dist/yawgl.bundle.js",
   "files": [
-    "build"
+    "dist"
   ],
   "directories": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rollup -c"
+    "build": "rollup -c build/rollup.config.js"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/jjhembd/yawgl#readme",
   "devDependencies": {
-    "rollup": "^1.7.3"
+    "rollup": "^1.7.3",
+    "rollup-plugin-node-resolve": "^4.2.1"
   }
 }
