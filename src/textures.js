@@ -13,9 +13,10 @@ export function initTexture(gl, width, height) { // data) {
   const internalFormat = gl.RGBA;
   const srcFormat = gl.RGBA;
   const srcType = gl.UNSIGNED_BYTE;
+  const border = 0;
 
   //gl.texImage2D(target, level, internalFormat, srcFormat, srcType, data);
-  gl.texImage2D(target, level, internalFormat, width, height,
+  gl.texImage2D(target, level, internalFormat, width, height, border,
       srcFormat, srcType, null);
 
   // Set up mipmapping and anisotropic filtering, if appropriate
