@@ -421,23 +421,8 @@ function initTexture(gl, width, height) {
 
   return {
     sampler: texture,
-    updatePartial,
     replace,
     update,
-  }
-
-  function updatePartial( image ) {
-    // Updates a portion of the texture with the supplied image data.
-    gl.bindTexture(target, texture);
-    
-    // Image will be written starting from the pixel (xoffset, yoffset).
-    // If these values are not set on the input, use (0,0)
-    var xoff = image.xoffset || 0;
-    var yoff = image.yoffset || 0;
-    gl.texSubImage2D(target, level, xoff, yoff, srcFormat, srcType, image);
-
-    // TODO: don't we need to update the mipmaps??
-    return;
   }
 
   function replace( image ) {
@@ -452,10 +437,14 @@ function initTexture(gl, width, height) {
   }
 
   function update( image ) {
-    // Re-fills the texture with the supplied image data,
-    // ASSUMING the image and texture are the same size
+    // Updates a portion of the texture with the supplied image data.
     gl.bindTexture(target, texture);
-    gl.texSubImage2D(target, level, 0, 0, srcFormat, srcType, image);
+
+    // Image will be written starting from the pixel (xoffset, yoffset).
+    // If these values are not set on the input, use (0,0)
+    var xoff = image.xoffset || 0;
+    var yoff = image.yoffset || 0;
+    gl.texSubImage2D(target, level, xoff, yoff, srcFormat, srcType, image);
 
     setupMipMaps(gl, target, image.width, image.height);
     return;
