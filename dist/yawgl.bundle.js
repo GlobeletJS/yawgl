@@ -241,9 +241,7 @@ function prepCanvas(gl) {
 
 function drawOver( gl, programInfo, buffers, uniforms ) {
   // Overwrite whatever is on the canvas, without clearing anything
-
-  // Tell WebGL how to convert from clip space to pixels
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  // BEWARE: make sure viewport is already set appropriately
 
   // Set up program, attributes, and uniforms
   gl.useProgram(programInfo.program);
@@ -397,7 +395,7 @@ function initQuadBuffers(gl) {
   };
 }
 
-function initTexture(gl, width, height) { // data) {
+function initTexture(gl, width, height) {
   // Initializes a 2D texture object, extending the default gl.createTexture()
   // The GL context and the binding target are implicitly saved in the closure.
   // Returns the sampler (as a property) along with update and replace methods.
@@ -414,12 +412,10 @@ function initTexture(gl, width, height) { // data) {
   const srcType = gl.UNSIGNED_BYTE;
   const border = 0;
 
-  //gl.texImage2D(target, level, internalFormat, srcFormat, srcType, data);
   gl.texImage2D(target, level, internalFormat, width, height, border,
       srcFormat, srcType, null);
 
   // Set up mipmapping and anisotropic filtering, if appropriate
-  //setupMipMaps(gl, target, data.width, data.height);
   setupMipMaps(gl, target, width, height);
   setTextureAnisotropy(gl, target);
 
@@ -476,7 +472,7 @@ function initTiledTexture(gl, numTilesX, numTilesY, tileSize, callBack) {
   dummy.yoffset = 0;
 
   // Initialize the texture using defined parameters and dummy image
-  const texture = initTexture(gl, width, height); //initTexture(gl, dummy);
+  const texture = initTexture(gl, width, height);
 
   // Add callBack to default update routine
   function updateWithCallBack( image ) {

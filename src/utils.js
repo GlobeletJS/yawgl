@@ -88,9 +88,7 @@ function prepCanvas(gl) {
 
 export function drawOver( gl, programInfo, buffers, uniforms ) {
   // Overwrite whatever is on the canvas, without clearing anything
-
-  // Tell WebGL how to convert from clip space to pixels
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  // BEWARE: make sure viewport is already set appropriately
 
   // Set up program, attributes, and uniforms
   gl.useProgram(programInfo.program);
