@@ -53,9 +53,9 @@ function loadShader(gl, type, source) {
   return shader;
 }
 
-export function drawScene( gl, programInfo, bufferInfo, uniforms ) {
+export function drawScene( gl, programInfo, bufferInfo, uniforms, viewport ) {
   // Make a blank canvas that fills the displayed size from CSS
-  prepCanvas(gl);
+  prepCanvas(gl, viewport);
 
   // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
@@ -68,9 +68,12 @@ export function drawScene( gl, programInfo, bufferInfo, uniforms ) {
   // Draw the scene
   gl.drawElements(gl.TRIANGLES, bufferInfo.indices.vertexCount,
       bufferInfo.indices.type, bufferInfo.indices.offset);
+
+  // Turn off the scissor test for now  TODO: is this necessary?
+  gl.disable(gl.SCISSOR_TEST);
 }
 
-function prepCanvas(gl) {
+function prepCanvas(gl, port) {
   // Set some parameters
   gl.clearColor(0.0, 0.0, 0.0, 0.0);  // Clear to transparent black
   gl.clearDepth(1.0);                 // Clear everything
@@ -78,7 +81,14 @@ function prepCanvas(gl) {
   gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
 
   // Tell WebGL how to convert from clip space to pixels
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  if (port !== undefined) {
+    gl.viewport(port.left, port.bottom, port.width, port.height);
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(port.left, port.bottom, port.width, port.height);
+  } else {
+    // Use the whole canvas
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  }
 
   // Clear the canvas AND the depth buffer
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

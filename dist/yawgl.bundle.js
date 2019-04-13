@@ -206,9 +206,9 @@ function loadShader(gl, type, source) {
   return shader;
 }
 
-function drawScene( gl, programInfo, bufferInfo, uniforms ) {
+function drawScene( gl, programInfo, bufferInfo, uniforms, viewport ) {
   // Make a blank canvas that fills the displayed size from CSS
-  prepCanvas(gl);
+  prepCanvas(gl, viewport);
 
   // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
@@ -221,9 +221,12 @@ function drawScene( gl, programInfo, bufferInfo, uniforms ) {
   // Draw the scene
   gl.drawElements(gl.TRIANGLES, bufferInfo.indices.vertexCount,
       bufferInfo.indices.type, bufferInfo.indices.offset);
+
+  // Turn off the scissor test for now  TODO: is this necessary?
+  gl.disable(gl.SCISSOR_TEST);
 }
 
-function prepCanvas(gl) {
+function prepCanvas(gl, port) {
   // Set some parameters
   gl.clearColor(0.0, 0.0, 0.0, 0.0);  // Clear to transparent black
   gl.clearDepth(1.0);                 // Clear everything
@@ -231,7 +234,14 @@ function prepCanvas(gl) {
   gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
 
   // Tell WebGL how to convert from clip space to pixels
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  if (port !== undefined) {
+    gl.viewport(port.left, port.bottom, port.width, port.height);
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(port.left, port.bottom, port.width, port.height);
+  } else {
+    // Use the whole canvas
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  }
 
   // Clear the canvas AND the depth buffer
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -270,22 +280,34 @@ function clearRect(gl, x, y, width, height) {
   return;
 }
 
-function initView(viewElement, fieldOfView) {
-  // The viewElement is a window into a 3D world, as portrayed on a background
-  // canvas. See twgljs.org/examples/itemlist.html
+function initView(display, porthole, fieldOfView) {
+  // The porthole is a window into a 3D world, as portrayed on a background
+  // display. See twgljs.org/examples/itemlist.html
   // fieldOfView is the vertical view angle range in degrees (floating point)
 
-  // Compute values for transformation between the 3D world and the 2D viewElement
+  // Compute values for transformation between the 3D world and the 2D porthole
   var tanFOV = Math.tan(fieldOfView * Math.PI / 180.0 / 2.0);
-  var width = viewElement.clientWidth;
-  var height = viewElement.clientHeight;
-  var aspect = width / height;
-  const maxRay = [aspect * tanFOV, tanFOV];
+
   // Pixel coordinates relative to the whole browser window
-  var rect = viewElement.getBoundingClientRect();
+  var portRect = porthole.getBoundingClientRect();
+  var dispRect = display.getBoundingClientRect();
+
+  // Porthole coordinates relative to display rectangle
+  const viewport = {
+    left: portRect.left - dispRect.left,
+    // Note flipped sign of Y! getBoundingClientRect increases downward, but
+    // for WebGL we want Y increasing upward
+    bottom: dispRect.bottom - portRect.bottom,
+    width: porthole.clientWidth,
+    height: porthole.clientHeight,
+  };
+  var aspect = viewport.width / viewport.height;
+  const maxRay = [aspect * tanFOV, tanFOV];
 
   return {
-    element: viewElement, // Back-reference
+    element: porthole, // Back-reference
+    viewport,
+    moved,
     resized,
     getRayParams,
     maxRay, // TODO: is it good to expose local state?
@@ -297,18 +319,38 @@ function initView(viewElement, fieldOfView) {
     },
   };
 
+  function moved() {
+    // Update rectangles. boundingClientRect is relative to browser window
+    portRect = porthole.getBoundingClientRect();
+    dispRect = display.getBoundingClientRect();
+
+    // Compute relative position of porthole vs display
+    let left = portRect.left - dispRect.left;
+    let bottom = dispRect.bottom - portRect.bottom;
+
+    // If any change, update the viewport
+    if (viewport.left !== left || viewport.bottom !== bottom) {
+      viewport.left = portRect.left - dispRect.left;
+      viewport.bottom = dispRect.bottom - portRect.bottom;
+
+      // Let the calling program know that the porthole moved
+      return true;
+    }
+    return false;
+  }
+
   function resized() {
-    if (viewElement.clientWidth !== width || 
-        viewElement.clientHeight !== height) {
-      // viewElement has changed size. Store updated dimensions
-      width = viewElement.clientWidth;
-      height = viewElement.clientHeight;
+    if ( viewport.width !== porthole.clientWidth || 
+        viewport.height !== porthole.clientHeight ) {
+      // porthole has changed size. Store updated dimensions
+      viewport.width = porthole.clientWidth;
+      viewport.height = porthole.clientHeight;
+
       // Recompute derived transform parameters
-      aspect = width / height;
+      aspect = viewport.width / viewport.height;
       maxRay[0] = aspect * tanFOV;
-      // Update coordinate system relative to browser window
-      rect = viewElement.getBoundingClientRect();
-      // Let the calling program know the viewElement was resized
+
+      // Let the calling program know the porthole was resized
       return true;
     }
     return false;
@@ -323,15 +365,15 @@ function initView(viewElement, fieldOfView) {
     // rect.right and .bottom are NOT equal to evnt.clientX/Y at the bottom
     // right pixel -- they are one more than the evnt.clientX/Y values.
     // Thus the number of pixels in the box is given by 
-    //    viewElement.clientWidth = rect.right - rect.left  (NO +1 !!)
-    var x = evnt.clientX - rect.left;
-    var y = rect.bottom - evnt.clientY - 1; // Flip sign to make +y upward
+    //    porthole.clientWidth = rect.right - rect.left  (NO +1 !!)
+    var x = evnt.clientX - portRect.left;
+    var y = portRect.bottom - evnt.clientY - 1; // Flip sign to make +y upward
 
     // Normalized distances from center of box. We normalize by pixel DISTANCE
     // rather than pixel count, to ensure we get -1 and +1 at the ends.
     // (Confirm by considering the 2x2 case)
-    var xratio = 2 * x / (width - 1) - 1;
-    var yratio = 2 * y / (height - 1) -1;
+    var xratio = 2 * x / (viewport.width - 1) - 1;
+    var yratio = 2 * y / (viewport.height - 1) -1;
 
     return {
       tanX: xratio * maxRay[0],
@@ -340,11 +382,11 @@ function initView(viewElement, fieldOfView) {
   }
 }
 
-// Make sure the viewElement drawingbuffer is the same size as the display
-// webglfundamentals.org/webgl/lessons/webgl-resizing-the-viewElement.html
+// Make sure the canvas drawingbuffer is the same size as the display
+// webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
 function resizeCanvasToDisplaySize(canvas) {
-  var width = canvas.clientWidth;
-  var height = canvas.clientHeight;
+  let width = canvas.clientWidth;
+  let height = canvas.clientHeight;
   if (canvas.width !== width || canvas.height !== height) {
     // Resize drawingbuffer to match resized display
     canvas.width = width;
