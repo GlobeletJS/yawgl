@@ -6,7 +6,8 @@ export {
 } from "./utils.js";
 
 export { 
-  initScreen,
+  initView,
+  resizeCanvasToDisplaySize,
 } from "./screen.js";
 
 export {
