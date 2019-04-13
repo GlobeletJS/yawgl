@@ -285,7 +285,7 @@ function initView(viewElement, fieldOfView) {
   var rect = viewElement.getBoundingClientRect();
 
   return {
-    viewElement, // Back-reference
+    element: viewElement, // Back-reference
     resized,
     getRayParams,
     maxRay, // TODO: is it good to expose local state?
