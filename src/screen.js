@@ -25,8 +25,7 @@ export function initView(display, porthole, fieldOfView) {
   return {
     element: porthole, // Back-reference
     viewport,
-    moved,
-    resized,
+    changed,
     getRayParams,
     maxRay, // TODO: is it good to expose local state?
     topEdge: function() {
@@ -37,7 +36,7 @@ export function initView(display, porthole, fieldOfView) {
     },
   };
 
-  function moved() {
+  function changed() {
     // Update rectangles. boundingClientRect is relative to browser window
     portRect = porthole.getBoundingClientRect();
     dispRect = display.getBoundingClientRect();
@@ -45,30 +44,19 @@ export function initView(display, porthole, fieldOfView) {
     // Compute relative position of porthole vs display
     let left = portRect.left - dispRect.left;
     let bottom = dispRect.bottom - portRect.bottom;
+    // Compute porthole size
+    let width = portRect.right - portRect.left;
+    let height = portRect.bottom - portRect.top;
 
     // If any change, update the viewport
-    if (viewport.left !== left || viewport.bottom !== bottom) {
-      viewport.left = portRect.left - dispRect.left;
-      viewport.bottom = dispRect.bottom - portRect.bottom;
+    if (viewport.left !== left || viewport.bottom !== bottom ||
+        viewport.width !== width || viewport.height !== height) {
+      viewport.left = left;
+      viewport.bottom = bottom;
+      viewport.width = width;
+      viewport.height = height;
 
-      // Let the calling program know that the porthole moved
-      return true;
-    }
-    return false;
-  }
-
-  function resized() {
-    if ( viewport.width !== porthole.clientWidth || 
-        viewport.height !== porthole.clientHeight ) {
-      // porthole has changed size. Store updated dimensions
-      viewport.width = porthole.clientWidth;
-      viewport.height = porthole.clientHeight;
-
-      // Recompute derived transform parameters
-      aspect = viewport.width / viewport.height;
-      maxRay[0] = aspect * tanFOV;
-
-      // Let the calling program know the porthole was resized
+      // Let the calling program know that the porthole changed
       return true;
     }
     return false;
