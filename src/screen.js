@@ -56,6 +56,10 @@ export function initView(display, porthole, fieldOfView) {
       viewport.width = width;
       viewport.height = height;
 
+      // Recompute derived parameters
+      aspect = width / height;
+      maxRay[0] = aspect * tanFOV;
+
       // Let the calling program know that the porthole changed
       return true;
     }
