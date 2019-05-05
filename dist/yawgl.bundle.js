@@ -350,7 +350,7 @@ function initView(display, porthole, fieldOfView) {
 
   // Convert a position on the screen into tangents of the angles
   // (relative to screen normal) of a ray shooting off into the 3D space
-  function getRayParams(clientX, clientY) {
+  function getRayParams(rayVec, clientX, clientY) {
     // NOTE strange behavior of getBoundingClientRect()
     // rect.left and .top are equal to the coordinates given by clientX/Y
     // when the mouse is at the left top pixel in the box.
@@ -367,10 +367,11 @@ function initView(display, porthole, fieldOfView) {
     var xratio = 2 * x / (viewport.width - 1) - 1;
     var yratio = 2 * y / (viewport.height - 1) -1;
 
-    return {
-      tanX: xratio * maxRay[0],
-      tanY: yratio * maxRay[1],
-    };
+    rayVec[0] = xratio * maxRay[0];
+    rayVec[1] = yratio * maxRay[1];
+    //rayVec[2] = -1.0;
+    //rayVec[3] = 0.0;
+    return;
   }
 }
 
