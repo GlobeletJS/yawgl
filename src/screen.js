@@ -66,18 +66,18 @@ export function initView(display, porthole, fieldOfView) {
     return false;
   }
 
-  // Convert an event position on the screen into tangents of the angles
+  // Convert a position on the screen into tangents of the angles
   // (relative to screen normal) of a ray shooting off into the 3D space
-  function getRayParams(evnt) {
+  function getRayParams(clientX, clientY) {
     // NOTE strange behavior of getBoundingClientRect()
-    // rect.left and .top are equal to the coordinates given by evnt.clientX/Y
+    // rect.left and .top are equal to the coordinates given by clientX/Y
     // when the mouse is at the left top pixel in the box.
-    // rect.right and .bottom are NOT equal to evnt.clientX/Y at the bottom
-    // right pixel -- they are one more than the evnt.clientX/Y values.
+    // rect.right and .bottom are NOT equal to clientX/Y at the bottom
+    // right pixel -- they are one more than the clientX/Y values.
     // Thus the number of pixels in the box is given by 
     //    porthole.clientWidth = rect.right - rect.left  (NO +1 !!)
-    var x = evnt.clientX - portRect.left;
-    var y = portRect.bottom - evnt.clientY - 1; // Flip sign to make +y upward
+    var x = clientX - portRect.left;
+    var y = portRect.bottom - clientY - 1; // Flip sign to make +y upward
 
     // Normalized distances from center of box. We normalize by pixel DISTANCE
     // rather than pixel count, to ensure we get -1 and +1 at the ends.
