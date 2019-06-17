@@ -61,9 +61,8 @@ function createUniformSetters(gl, program) {
 
     var name = uniformInfo.name;
     // remove the array suffix added by getActiveUniform
-    if (name.substr(-3) === "[0]") {
-      name = name.substr(0, name.length - 3);
-    }
+    if (name.substr(-3) === "[0]") name = name.substr(0, name.length - 3);
+
     var setter = createUniformSetter(program, uniformInfo);
     uniformSetters[name] = setter;
   }
@@ -71,50 +70,46 @@ function createUniformSetters(gl, program) {
 
   // This function must be nested to access the textureUnit index
   function createUniformSetter(program, uniformInfo) {
-    var location = gl.getUniformLocation(program, uniformInfo.name);
+    var loc = gl.getUniformLocation(program, uniformInfo.name);
     var isArray = (uniformInfo.size > 1 && uniformInfo.name.substr(-3) === "[0]");
     var type = uniformInfo.type;
     switch (type) {
-      case gl.FLOAT :
-        if (isArray) {
-          return function(v) { gl.uniform1fv(location, v); };
-        } else {
-          return function(v) { gl.uniform1f(location, v); };
-        }
-      case gl.FLOAT_VEC2 :
-        return function(v) { gl.uniform2fv(location, v); };
-      case gl.FLOAT_VEC3 :
-        return function(v) { gl.uniform3fv(location, v); };
-      case gl.FLOAT_VEC4 :
-        return function(v) { gl.uniform4fv(location, v); };
-      case gl.INT :
-        if (isArray) {
-          return function(v) { gl.uniform1iv(location, v); };
-        } else {
-          return function(v) { gl.uniform1i(location, v); };
-        }
-      case gl.INT_VEC2 :
-        return function(v) { gl.uniform2iv(location, v); };
-      case gl.INT_VEC3 :
-        return function(v) { gl.uniform3iv(location, v); };
-      case gl.INT_VEC4 :
-        return function(v) { gl.uniform4iv(location, v); };
-      case gl.BOOL :
-        return function(v) { gl.uniform1iv(location, v); };
-      case gl.BOOL_VEC2 :
-        return function(v) { gl.uniform2iv(location, v); };
-      case gl.BOOL_VEC3 :
-        return function(v) { gl.uniform3iv(location, v); };
-      case gl.BOOL_VEC4 :
-        return function(v) { gl.uniform4iv(location, v); };
-      case gl.FLOAT_MAT2 :
-        return function(v) { gl.uniformMatrix2fv(location, false, v); };
-      case gl.FLOAT_MAT3 :
-        return function(v) { gl.uniformMatrix3fv(location, false, v); };
-      case gl.FLOAT_MAT4 :
-        return function(v) { gl.uniformMatrix4fv(location, false, v); };
-      case gl.SAMPLER_2D :
-      case gl.SAMPLER_CUBE :
+      case gl.FLOAT:
+        return (isArray)
+          ? (v) => gl.uniform1fv(loc, v)
+          : (v) => gl.uniform1f(loc, v);
+      case gl.FLOAT_VEC2:
+        return (v) => gl.uniform2fv(loc, v);
+      case gl.FLOAT_VEC3:
+        return (v) => gl.uniform3fv(loc, v);
+      case gl.FLOAT_VEC4:
+        return (v) => gl.uniform4fv(loc, v);
+      case gl.INT:
+        return (isArray)
+          ? (v) => gl.uniform1iv(loc, v)
+          : (v) => gl.uniform1i(loc, v);
+      case gl.INT_VEC2:
+        return (v) => gl.uniform2iv(loc, v);
+      case gl.INT_VEC3:
+        return (v) => gl.uniform3iv(loc, v);
+      case gl.INT_VEC4:
+        return (v) => gl.uniform4iv(loc, v);
+      case gl.BOOL:
+        return (v) => gl.uniform1iv(loc, v);
+      case gl.BOOL_VEC2:
+        return (v) => gl.uniform2iv(loc, v);
+      case gl.BOOL_VEC3:
+        return (v) => gl.uniform3iv(loc, v);
+      case gl.BOOL_VEC4:
+        return (v) => gl.uniform4iv(loc, v);
+      case gl.FLOAT_MAT2:
+        return (v) => gl.uniformMatrix2fv(loc, false, v);
+      case gl.FLOAT_MAT3:
+        return (v) => gl.uniformMatrix3fv(loc, false, v);
+      case gl.FLOAT_MAT4:
+        return (v) => gl.uniformMatrix4fv(loc, false, v);
+      case gl.SAMPLER_2D:
+      case gl.SAMPLER_CUBE:
         if (isArray) {
           var units = [];
           for (let i = 0; i < uniformInfo.size; i++) { // greggman wrong here!
@@ -122,7 +117,7 @@ function createUniformSetters(gl, program) {
           }
           return function(bindPoint, units) {
             return function(textures) {
-              gl.uniform1iv(location, units);
+              gl.uniform1iv(loc, units);
               textures.forEach( function(texture, index) {
                 gl.activeTexture(gl.TEXTURE0 + units[index]);
                 gl.bindTexture(bindPoint, texture);
@@ -132,8 +127,8 @@ function createUniformSetters(gl, program) {
         } else {
           return function(bindPoint, unit) {
             return function(texture) {
-              //gl.uniform1i(location, units); // Typo? How did it even work?
-              gl.uniform1i(location, unit);
+              //gl.uniform1i(loc, units); // Typo? How did it even work?
+              gl.uniform1i(loc, unit);
               gl.activeTexture(gl.TEXTURE0 + unit);
               gl.bindTexture(bindPoint, texture);
             };
