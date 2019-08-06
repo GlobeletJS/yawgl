@@ -1,69 +1,44 @@
-export function initView(display, porthole, fieldOfView) {
-  // The porthole is a window into a 3D world, as portrayed on a background
-  // display. See twgljs.org/examples/itemlist.html
+export function initView(porthole, fieldOfView) {
+  // The porthole is an HTML element acting as a window into a 3D world
   // fieldOfView is the vertical view angle range in degrees (floating point)
 
   // Compute values for transformation between the 3D world and the 2D porthole
+  var portRect, width, height, aspect;
   var tanFOV = Math.tan(fieldOfView * Math.PI / 180.0 / 2.0);
+  const maxRay = [];
 
-  // Pixel coordinates relative to the whole browser window
-  var portRect = porthole.getBoundingClientRect();
-  var dispRect = display.getBoundingClientRect();
-
-  // Porthole coordinates relative to display rectangle
-  const viewport = {
-    left: portRect.left - dispRect.left,
-    // Note flipped sign of Y! getBoundingClientRect increases downward, but
-    // for WebGL we want Y increasing upward
-    bottom: dispRect.bottom - portRect.bottom,
-    width: porthole.clientWidth,
-    height: porthole.clientHeight,
-  };
-  var aspect = viewport.width / viewport.height;
-  const maxRay = [aspect * tanFOV, tanFOV];
+  computeRayParams(); // Set initial values
 
   return {
     element: porthole, // Back-reference
-    viewport,
-    changed,
-    getRayParams,
+    changed: computeRayParams,
+
+    width: () => width,
+    height: () => height,
+    topEdge: () => maxRay[1],   // tanFOV
+    rightEdge: () => maxRay[0], // aspect * tanFOV
     maxRay, // TODO: is it good to expose local state?
-    topEdge: function() {
-      return maxRay[1]; // tanFOV
-    },
-    rightEdge: function() {
-      return maxRay[0]; // aspect * tanFOV
-    },
+    getRayParams,
   };
 
-  function changed() {
-    // Update rectangles. boundingClientRect is relative to browser window
-    portRect = porthole.getBoundingClientRect();
-    dispRect = display.getBoundingClientRect();
-
-    // Compute relative position of porthole vs display
-    let left = portRect.left - dispRect.left;
-    let bottom = dispRect.bottom - portRect.bottom;
+  function computeRayParams() {
     // Compute porthole size
-    let width = portRect.right - portRect.left;
-    let height = portRect.bottom - portRect.top;
+    portRect = porthole.getBoundingClientRect();
+    let newWidth = portRect.right - portRect.left;
+    let newHeight = portRect.bottom - portRect.top;
 
-    // If any change, update the viewport
-    if (viewport.left !== left || viewport.bottom !== bottom ||
-        viewport.width !== width || viewport.height !== height) {
-      viewport.left = left;
-      viewport.bottom = bottom;
-      viewport.width = width;
-      viewport.height = height;
+    // Exit if no change
+    if (width === newWidth && height === newHeight) return false;
 
-      // Recompute derived parameters
-      aspect = width / height;
-      maxRay[0] = aspect * tanFOV;
+    // Update stored values
+    width = newWidth;
+    height = newHeight;
+    aspect = width / height;
+    maxRay[0] = aspect * tanFOV;
+    maxRay[1] = tanFOV; // Probably no change, but it is exposed externally
 
-      // Let the calling program know that the porthole changed
-      return true;
-    }
-    return false;
+    // Let the calling program know that the porthole changed
+    return true;
   }
 
   // Convert a position on the screen into tangents of the angles
@@ -82,14 +57,60 @@ export function initView(display, porthole, fieldOfView) {
     // Normalized distances from center of box. We normalize by pixel DISTANCE
     // rather than pixel count, to ensure we get -1 and +1 at the ends.
     // (Confirm by considering the 2x2 case)
-    var xratio = 2 * x / (viewport.width - 1) - 1;
-    var yratio = 2 * y / (viewport.height - 1) -1;
+    var xratio = 2 * x / (width - 1) - 1;
+    var yratio = 2 * y / (height - 1) -1;
 
     rayVec[0] = xratio * maxRay[0];
     rayVec[1] = yratio * maxRay[1];
     //rayVec[2] = -1.0;
     //rayVec[3] = 0.0;
     return;
+  }
+}
+
+export function initViewport(display, porthole) {
+  // Stores and updates the parameters required for gl.viewport, for WebGL
+  // rendering to an element overlaying a larger background canvas.
+  // See twgljs.org/examples/itemlist.html.
+  // Inputs are HTML elements whose boundingClientRects match the background
+  // canvas (display) and the desired area for rendering the scene (porthole)
+
+  var portRect, dispRect;
+  const viewport = {};
+
+  setViewport(); // Set initial values
+
+  return {
+    viewport,
+    changed: setViewport,
+  }
+
+  function setViewport() {
+    // Update rectangles. boundingClientRect is relative to browser window
+    dispRect = display.getBoundingClientRect();
+    portRect = porthole.getBoundingClientRect();
+
+    // Compute relative position of porthole vs display
+    // Note flipped sign of Y! getBoundingClientRect increases downward, but
+    // for WebGL we want Y increasing upward
+    let bottom = dispRect.bottom - portRect.bottom;
+    let left = portRect.left - dispRect.left;
+    // Compute porthole size
+    let width = portRect.right - portRect.left;
+    let height = portRect.bottom - portRect.top;
+
+    // Exit if no change
+    if (viewport.left === left && viewport.bottom === bottom &&
+        viewport.width === width && viewport.height === height) return false;
+
+    // Update the viewport
+    viewport.left = left;
+    viewport.bottom = bottom;
+    viewport.width = width;
+    viewport.height = height;
+
+    // Let the calling program know that the porthole changed
+    return true;
   }
 }
 
