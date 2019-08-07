@@ -81,6 +81,7 @@ export function initViewport(display, porthole) {
   setViewport(); // Set initial values
 
   return {
+    element: porthole, // Back-reference
     viewport,
     changed: setViewport,
   }

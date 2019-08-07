@@ -7,6 +7,7 @@ export {
 
 export { 
   initView,
+  initViewport,
   resizeCanvasToDisplaySize,
 } from "./screen.js";
 
