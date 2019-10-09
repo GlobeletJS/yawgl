@@ -1,6 +1,6 @@
-// Very similar to greggman's module:
-// https://github.com/greggman/webgl-fundamentals/blob/master/webgl/resources/webgl-utils.js
 export function createUniformSetters(gl, program) {
+  // Very similar to greggman's module:
+  // https://github.com/greggman/webgl-fundamentals/blob/master/webgl/resources/webgl-utils.js
 
   var uniformSetters = {};
   var numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
@@ -65,7 +65,7 @@ export function createUniformSetters(gl, program) {
       case gl.SAMPLER_CUBE:
         if (isArray) {
           var units = [];
-          for (let i = 0; i < uniformInfo.size; i++) { // greggman wrong here!
+          for (let i = 0; i < uniformInfo.size; i++) {
             units.push(textureUnit++);
           }
           return function(bindPoint, units) {

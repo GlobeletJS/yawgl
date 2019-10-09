@@ -3,17 +3,19 @@
   "version": "0.0.1",
   "description": "Yet Another WebGL Library",
   "main": "dist/yawgl.bundle.js",
+  "module": "dist/yawgl.bundle.js",
   "files": [
     "dist"
   ],
   "directories": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rollup -c build/rollup.config.js"
+    "build": "rollup -c build/rollup.config.js",
+    "postversion": "git push && git push --tags"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jjhembd/yawgl.git"
+    "url": "git+https://github.com/GlobeletJS/yawgl.git"
   },
   "keywords": [
     "webgl",
@@ -22,11 +24,13 @@
   "author": "Jeshurun Hembd",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jjhembd/yawgl/issues"
+    "url": "https://github.com/GlobeletJS/yawgl/issues"
   },
-  "homepage": "https://github.com/jjhembd/yawgl#readme",
+  "homepage": "https://github.com/GlobeletJS/yawgl#readme",
   "devDependencies": {
-    "rollup": "^1.7.3",
-    "rollup-plugin-node-resolve": "^4.2.1"
-  }
+    "http-server": "^0.11.1",
+    "rollup": "^1.23.1",
+    "rollup-plugin-node-resolve": "^4.2.4"
+  },
+  "dependencies": {}
 }

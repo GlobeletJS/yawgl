@@ -1,9 +1,12 @@
 export { 
-  initShaderProgram, 
+  initShaderProgram,
+} from "./initShader.js";
+
+export {
   drawScene,
   drawOver,
   clearRect,
-} from "./utils.js";
+} from "./draw.js";
 
 export { 
   initView,
@@ -17,7 +20,9 @@ export {
 
 export { 
   initTexture, 
-  initTiledTexture, 
-  loadTexture, 
+  loadTexture,
+} from "./tex-2d.js";
+
+export {
   loadCubeMapTexture,
-} from "./textures.js";
+} from "./tex-cubemap.js";
