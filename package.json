@@ -1,6 +1,6 @@
 {
   "name": "yawgl",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Yet Another WebGL Library",
   "main": "dist/yawgl.bundle.js",
   "module": "dist/yawgl.bundle.js",
