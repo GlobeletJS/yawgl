@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "description": "Yet Another WebGL Library",
   "main": "dist/yawgl.bundle.js",
-  "module": "dist/yawgl.bundle.js",
+  "module": "src/index.js",
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "directories": {},
   "scripts": {

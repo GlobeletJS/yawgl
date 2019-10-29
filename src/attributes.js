@@ -1,7 +1,6 @@
 export function createAttributeSetters(gl, program) {
   // Very similar to greggman's module:
-  // https://github.com/gfxfundamentals/webgl-fundamentals/blob/master/
-  //  webgl/resources/webgl-utils.js
+  // webglfundamentals.org/docs/module-webgl-utils.html#.createAttributeSetters
   var attribSetters = {};
   var numAttribs = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
   for (let i = 0; i < numAttribs; i++) {

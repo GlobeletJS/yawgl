@@ -1,6 +1,6 @@
 export function createUniformSetters(gl, program) {
   // Very similar to greggman's module:
-  // https://github.com/greggman/webgl-fundamentals/blob/master/webgl/resources/webgl-utils.js
+  // webglfundamentals.org/docs/module-webgl-utils.html#.createUniformSetters
 
   var uniformSetters = {};
   var numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
@@ -64,10 +64,7 @@ export function createUniformSetters(gl, program) {
       case gl.SAMPLER_2D:
       case gl.SAMPLER_CUBE:
         if (isArray) {
-          var units = [];
-          for (let i = 0; i < uniformInfo.size; i++) {
-            units.push(textureUnit++);
-          }
+          var units = Array.from(Array(uniformInfo.size), () => textureUnit++);
           return function(bindPoint, units) {
             return function(textures) {
               gl.uniform1iv(loc, units);

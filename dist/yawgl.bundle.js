@@ -1,7 +1,193 @@
+function initView(porthole, fieldOfView) {
+  // The porthole is an HTML element acting as a window into a 3D world
+  // fieldOfView is the vertical view angle range in degrees (floating point)
+
+  // Compute values for transformation between the 3D world and the 2D porthole
+  var portRect, width, height, aspect;
+  var tanFOV = Math.tan(fieldOfView * Math.PI / 180.0 / 2.0);
+  const maxRay = [];
+
+  computeRayParams(); // Set initial values
+
+  return {
+    element: porthole, // Back-reference
+    changed: computeRayParams,
+
+    width: () => width,
+    height: () => height,
+    topEdge: () => maxRay[1],   // tanFOV
+    rightEdge: () => maxRay[0], // aspect * tanFOV
+    maxRay, // TODO: is it good to expose local state?
+    getRayParams,
+  };
+
+  function computeRayParams() {
+    // Compute porthole size
+    portRect = porthole.getBoundingClientRect();
+    let newWidth = portRect.right - portRect.left;
+    let newHeight = portRect.bottom - portRect.top;
+
+    // Exit if no change
+    if (width === newWidth && height === newHeight) return false;
+
+    // Update stored values
+    width = newWidth;
+    height = newHeight;
+    aspect = width / height;
+    maxRay[0] = aspect * tanFOV;
+    maxRay[1] = tanFOV; // Probably no change, but it is exposed externally
+
+    // Let the calling program know that the porthole changed
+    return true;
+  }
+
+  // Convert a position on the screen into tangents of the angles
+  // (relative to screen normal) of a ray shooting off into the 3D space
+  function getRayParams(rayVec, clientX, clientY) {
+    // NOTE strange behavior of getBoundingClientRect()
+    // rect.left and .top are equal to the coordinates given by clientX/Y
+    // when the mouse is at the left top pixel in the box.
+    // rect.right and .bottom are NOT equal to clientX/Y at the bottom
+    // right pixel -- they are one more than the clientX/Y values.
+    // Thus the number of pixels in the box is given by 
+    //    porthole.clientWidth = rect.right - rect.left  (NO +1 !!)
+    var x = clientX - portRect.left;
+    var y = portRect.bottom - clientY - 1; // Flip sign to make +y upward
+
+    // Normalized distances from center of box. We normalize by pixel DISTANCE
+    // rather than pixel count, to ensure we get -1 and +1 at the ends.
+    // (Confirm by considering the 2x2 case)
+    var xratio = 2 * x / (width - 1) - 1;
+    var yratio = 2 * y / (height - 1) -1;
+
+    rayVec[0] = xratio * maxRay[0];
+    rayVec[1] = yratio * maxRay[1];
+    //rayVec[2] = -1.0;
+    //rayVec[3] = 0.0;
+    return;
+  }
+}
+
+function initViewport(display, porthole) {
+  // Stores and updates the parameters required for gl.viewport, for WebGL
+  // rendering to an element overlaying a larger background canvas.
+  // See twgljs.org/examples/itemlist.html.
+  // Inputs are HTML elements whose boundingClientRects match the background
+  // canvas (display) and the desired area for rendering the scene (porthole)
+
+  var portRect, dispRect;
+  const viewport = {};
+
+  setViewport(); // Set initial values
+
+  return {
+    element: porthole, // Back-reference
+    viewport,
+    changed: setViewport,
+  }
+
+  function setViewport() {
+    // Update rectangles. boundingClientRect is relative to browser window
+    dispRect = display.getBoundingClientRect();
+    portRect = porthole.getBoundingClientRect();
+
+    // Compute relative position of porthole vs display
+    // Note flipped sign of Y! getBoundingClientRect increases downward, but
+    // for WebGL we want Y increasing upward
+    let bottom = dispRect.bottom - portRect.bottom;
+    let left = portRect.left - dispRect.left;
+    // Compute porthole size
+    let width = portRect.right - portRect.left;
+    let height = portRect.bottom - portRect.top;
+
+    // Exit if no change
+    if (viewport.left === left && viewport.bottom === bottom &&
+        viewport.width === width && viewport.height === height) return false;
+
+    // Update the viewport
+    viewport.left = left;
+    viewport.bottom = bottom;
+    viewport.width = width;
+    viewport.height = height;
+
+    // Let the calling program know that the porthole changed
+    return true;
+  }
+}
+
+function resizeCanvasToDisplaySize(canvas, multiplier) {
+  // Make sure the canvas drawingbuffer is the same size as the display
+  // webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+
+  // multiplier allows scaling. Example: multiplier = window.devicePixelRatio
+  multiplier = multiplier || 1;
+  multiplier = Math.max(0, multiplier); // Don't allow negative scaling
+
+  const width = Math.floor(canvas.clientWidth * multiplier);
+  const height = Math.floor(canvas.clientHeight * multiplier);
+
+  // Exit if no change
+  if (canvas.width === width && canvas.height === height) return false;
+
+  // Resize drawingbuffer to match resized display
+  canvas.width = width;
+  canvas.height = height;
+  return true;
+}
+
+function initQuadBuffers(gl) {
+  // 4 vertices at the corners of the quad
+  const vertices = [ -1, -1,  0,    1, -1,  0,    1,  1,  0,   -1,  1,  0 ];
+  // Store byte info and load into GPU
+  const vertexPositions = {
+    buffer: gl.createBuffer(),
+    numComponents: 3,
+    type: gl.FLOAT,
+    normalize: false,
+    stride: 0,
+    offset: 0
+  };
+  // Bind to the gl context
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositions.buffer);
+  // Pass the array into WebGL
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+  // Texture coordinates assume image has 0,0 at top left
+  const texCoordData = [ 0, 1,   1, 1,   1, 0,   0, 0 ];
+  const texCoords = {
+    buffer: gl.createBuffer(),
+    numComponents: 2,
+    type: gl.FLOAT,
+    normalize: false,
+    stride: 0,
+    offset: 0
+  };
+  gl.bindBuffer(gl.ARRAY_BUFFER, texCoords.buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoordData), gl.STATIC_DRAW);
+
+  // Index into two triangles
+  var indices = [ 0,  1,  2,    2,  3,  0 ];
+  const vertexIndices = {
+    buffer: gl.createBuffer(),
+    vertexCount: indices.length,
+    type: gl.UNSIGNED_SHORT,
+    offset: 0
+  };
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndices.buffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+  return {
+    attributes: {
+      aVertexPosition: vertexPositions,
+      aTexCoord: texCoords,
+    },
+    indices: vertexIndices,
+  };
+}
+
 function createAttributeSetters(gl, program) {
   // Very similar to greggman's module:
-  // https://github.com/gfxfundamentals/webgl-fundamentals/blob/master/
-  //  webgl/resources/webgl-utils.js
+  // webglfundamentals.org/docs/module-webgl-utils.html#.createAttributeSetters
   var attribSetters = {};
   var numAttribs = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
   for (let i = 0; i < numAttribs; i++) {
@@ -48,7 +234,7 @@ function setAttributes(setters, attribs) {
 
 function createUniformSetters(gl, program) {
   // Very similar to greggman's module:
-  // https://github.com/greggman/webgl-fundamentals/blob/master/webgl/resources/webgl-utils.js
+  // webglfundamentals.org/docs/module-webgl-utils.html#.createUniformSetters
 
   var uniformSetters = {};
   var numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
@@ -112,10 +298,7 @@ function createUniformSetters(gl, program) {
       case gl.SAMPLER_2D:
       case gl.SAMPLER_CUBE:
         if (isArray) {
-          var units = [];
-          for (let i = 0; i < uniformInfo.size; i++) {
-            units.push(textureUnit++);
-          }
+          var units = Array.from(Array(uniformInfo.size), () => textureUnit++);
           return function(bindPoint, units) {
             return function(textures) {
               gl.uniform1iv(loc, units);
@@ -267,192 +450,6 @@ function clearRect(gl, x, y, width, height) {
   gl.disable(gl.SCISSOR_TEST);
 
   return;
-}
-
-function initView(porthole, fieldOfView) {
-  // The porthole is an HTML element acting as a window into a 3D world
-  // fieldOfView is the vertical view angle range in degrees (floating point)
-
-  // Compute values for transformation between the 3D world and the 2D porthole
-  var portRect, width, height, aspect;
-  var tanFOV = Math.tan(fieldOfView * Math.PI / 180.0 / 2.0);
-  const maxRay = [];
-
-  computeRayParams(); // Set initial values
-
-  return {
-    element: porthole, // Back-reference
-    changed: computeRayParams,
-
-    width: () => width,
-    height: () => height,
-    topEdge: () => maxRay[1],   // tanFOV
-    rightEdge: () => maxRay[0], // aspect * tanFOV
-    maxRay, // TODO: is it good to expose local state?
-    getRayParams,
-  };
-
-  function computeRayParams() {
-    // Compute porthole size
-    portRect = porthole.getBoundingClientRect();
-    let newWidth = portRect.right - portRect.left;
-    let newHeight = portRect.bottom - portRect.top;
-
-    // Exit if no change
-    if (width === newWidth && height === newHeight) return false;
-
-    // Update stored values
-    width = newWidth;
-    height = newHeight;
-    aspect = width / height;
-    maxRay[0] = aspect * tanFOV;
-    maxRay[1] = tanFOV; // Probably no change, but it is exposed externally
-
-    // Let the calling program know that the porthole changed
-    return true;
-  }
-
-  // Convert a position on the screen into tangents of the angles
-  // (relative to screen normal) of a ray shooting off into the 3D space
-  function getRayParams(rayVec, clientX, clientY) {
-    // NOTE strange behavior of getBoundingClientRect()
-    // rect.left and .top are equal to the coordinates given by clientX/Y
-    // when the mouse is at the left top pixel in the box.
-    // rect.right and .bottom are NOT equal to clientX/Y at the bottom
-    // right pixel -- they are one more than the clientX/Y values.
-    // Thus the number of pixels in the box is given by 
-    //    porthole.clientWidth = rect.right - rect.left  (NO +1 !!)
-    var x = clientX - portRect.left;
-    var y = portRect.bottom - clientY - 1; // Flip sign to make +y upward
-
-    // Normalized distances from center of box. We normalize by pixel DISTANCE
-    // rather than pixel count, to ensure we get -1 and +1 at the ends.
-    // (Confirm by considering the 2x2 case)
-    var xratio = 2 * x / (width - 1) - 1;
-    var yratio = 2 * y / (height - 1) -1;
-
-    rayVec[0] = xratio * maxRay[0];
-    rayVec[1] = yratio * maxRay[1];
-    //rayVec[2] = -1.0;
-    //rayVec[3] = 0.0;
-    return;
-  }
-}
-
-function initViewport(display, porthole) {
-  // Stores and updates the parameters required for gl.viewport, for WebGL
-  // rendering to an element overlaying a larger background canvas.
-  // See twgljs.org/examples/itemlist.html.
-  // Inputs are HTML elements whose boundingClientRects match the background
-  // canvas (display) and the desired area for rendering the scene (porthole)
-
-  var portRect, dispRect;
-  const viewport = {};
-
-  setViewport(); // Set initial values
-
-  return {
-    element: porthole, // Back-reference
-    viewport,
-    changed: setViewport,
-  }
-
-  function setViewport() {
-    // Update rectangles. boundingClientRect is relative to browser window
-    dispRect = display.getBoundingClientRect();
-    portRect = porthole.getBoundingClientRect();
-
-    // Compute relative position of porthole vs display
-    // Note flipped sign of Y! getBoundingClientRect increases downward, but
-    // for WebGL we want Y increasing upward
-    let bottom = dispRect.bottom - portRect.bottom;
-    let left = portRect.left - dispRect.left;
-    // Compute porthole size
-    let width = portRect.right - portRect.left;
-    let height = portRect.bottom - portRect.top;
-
-    // Exit if no change
-    if (viewport.left === left && viewport.bottom === bottom &&
-        viewport.width === width && viewport.height === height) return false;
-
-    // Update the viewport
-    viewport.left = left;
-    viewport.bottom = bottom;
-    viewport.width = width;
-    viewport.height = height;
-
-    // Let the calling program know that the porthole changed
-    return true;
-  }
-}
-
-// Make sure the canvas drawingbuffer is the same size as the display
-// webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-function resizeCanvasToDisplaySize(canvas, multiplier) {
-  // multiplier allows scaling. Example: multiplier = window.devicePixelRatio
-  multiplier = multiplier || 1;
-  multiplier = Math.max(0, multiplier); // Don't allow negative scaling
-
-  const width = Math.floor(canvas.clientWidth * multiplier);
-  const height = Math.floor(canvas.clientHeight * multiplier);
-
-  // Exit if no change
-  if (canvas.width === width && canvas.height === height) return false;
-
-  // Resize drawingbuffer to match resized display
-  canvas.width = width;
-  canvas.height = height;
-  return true;
-}
-
-function initQuadBuffers(gl) {
-  // 4 vertices at the corners of the quad
-  const vertices = [ -1, -1,  0,    1, -1,  0,    1,  1,  0,   -1,  1,  0 ];
-  // Store byte info and load into GPU
-  const vertexPositions = {
-    buffer: gl.createBuffer(),
-    numComponents: 3,
-    type: gl.FLOAT,
-    normalize: false,
-    stride: 0,
-    offset: 0
-  };
-  // Bind to the gl context
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositions.buffer);
-  // Pass the array into WebGL
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
-  // Texture coordinates assume image has 0,0 at top left
-  const texCoordData = [ 0, 1,   1, 1,   1, 0,   0, 0 ];
-  const texCoords = {
-    buffer: gl.createBuffer(),
-    numComponents: 2,
-    type: gl.FLOAT,
-    normalize: false,
-    stride: 0,
-    offset: 0
-  };
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoords.buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoordData), gl.STATIC_DRAW);
-
-  // Index into two triangles
-  var indices = [ 0,  1,  2,    2,  3,  0 ];
-  const vertexIndices = {
-    buffer: gl.createBuffer(),
-    vertexCount: indices.length,
-    type: gl.UNSIGNED_SHORT,
-    offset: 0
-  };
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndices.buffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-  return {
-    attributes: {
-      aVertexPosition: vertexPositions,
-      aTexCoord: texCoords,
-    },
-    indices: vertexIndices,
-  };
 }
 
 function setupMipMaps(gl, target, width, height) {
