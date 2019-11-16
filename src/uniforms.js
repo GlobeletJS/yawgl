@@ -24,7 +24,7 @@ export function createUniformSetters(gl, program) {
   // This function must be nested to access the textureUnit index
   function createUniformSetter(program, uniformInfo) {
     var loc = gl.getUniformLocation(program, uniformInfo.name);
-    var isArray = (uniformInfo.size > 1 && uniformInfo.name.substr(-3) === "[0]");
+    var isArray = (uniformInfo.name.substr(-3) === "[0]");
     var type = uniformInfo.type;
     switch (type) {
       case gl.FLOAT:
