@@ -1,3 +1,77 @@
+function getExtendedContext(canvas) {
+  const haveCanvas = canvas instanceof Element;
+  if (!haveCanvas || canvas.tagName.toLowerCase() !== "canvas") {
+    throw Error("ERROR in yawgl.getExtendedContext: not a valid Canvas!");
+  }
+
+  // developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
+  //   #Take_advantage_of_universally_supported_WebGL_1_extensions
+  const universalExtensions = [
+    "ANGLE_instanced_arrays",
+    "EXT_blend_minmax",
+    "OES_element_index_unit",
+    "OES_standard_derivatives",
+    "OES_vertex_array_object",
+    "WEBGL_debug_renderer_info",
+    "WEBGL_lose_context"
+  ];
+
+  // Get a WebGL context, and extend it
+  const gl = canvas.getContext("webgl");
+  universalExtensions.forEach(ext => getAndApplyExtension(gl, ext));
+
+  // Modify the shaderSource method to add a preamble
+  const SHADER_PREAMBLE = `
+#extension GL_OES_standard_derivatives : enable
+#line 1
+`;
+  const shaderSource = gl.shaderSource;
+  gl.shaderSource = function(shader, source) {
+    const modified = (source.indexOf("GL_OES_standard_derivatives") < 0)
+      ? SHADER_PREAMBLE + source
+      : source;
+    shaderSource.call(gl, shader, modified);
+  };
+
+  return gl;
+}
+
+function getAndApplyExtension(gl, name) {
+  // https://webgl2fundamentals.org/webgl/lessons/webgl1-to-webgl2.html
+  const ext = gl.getExtension(name);
+  if (!ext) return null;
+
+  const fnSuffix = name.split("_")[0];
+  const enumSuffix = '_' + fnSuffix;
+
+  for (const key in ext) {
+    const value = ext[key];
+    const isFunc = typeof value === 'function';
+    const suffix = isFunc ? fnSuffix : enumSuffix;
+    let name = key;
+    // examples of where this is not true are WEBGL_compressed_texture_s3tc
+    // and WEBGL_compressed_texture_pvrtc
+    if (key.endsWith(suffix)) {
+      name = key.substring(0, key.length - suffix.length);
+    }
+    if (gl[name] !== undefined) {
+      if (!isFunc && gl[name] !== value) {
+        console.warn("conflict:", name, gl[name], value, key);
+      }
+    } else if (isFunc) {
+      gl[name] = (function(origFn) {
+        return function() {
+          return origFn.apply(ext, arguments);
+        };
+      })(value);
+    } else {
+      gl[name] = value;
+    }
+  }
+
+  return ext;
+}
+
 function initView(porthole, fieldOfView) {
   // The porthole is an HTML element acting as a window into a 3D world
   // fieldOfView is the vertical view angle range in degrees (floating point)
@@ -120,8 +194,7 @@ function resizeCanvasToDisplaySize(canvas, multiplier) {
   // webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
 
   // multiplier allows scaling. Example: multiplier = window.devicePixelRatio
-  multiplier = multiplier || 1;
-  multiplier = Math.max(0, multiplier); // Don't allow negative scaling
+  if (!multiplier || multiplier < 0) multplier = 1;
 
   const width = Math.floor(canvas.clientWidth * multiplier);
   const height = Math.floor(canvas.clientHeight * multiplier);
@@ -236,30 +309,32 @@ function createUniformSetters(gl, program) {
   // Very similar to greggman's module:
   // webglfundamentals.org/docs/module-webgl-utils.html#.createUniformSetters
 
-  var uniformSetters = {};
-  var numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-
   // Track texture bindpoint index in case multiple textures are required
   var textureUnit = 0;
 
+  const uniformSetters = {};
+  const numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+
   for (let i = 0; i < numUniforms; i++) {
-    var uniformInfo = gl.getActiveUniform(program, i);
+    let uniformInfo = gl.getActiveUniform(program, i);
     if (!uniformInfo) break;
 
-    var name = uniformInfo.name;
-    // remove the array suffix added by getActiveUniform
-    if (name.substr(-3) === "[0]") name = name.substr(0, name.length - 3);
+    let { name, type, size } = uniformInfo;
+    let loc = gl.getUniformLocation(program, name);
 
-    var setter = createUniformSetter(program, uniformInfo);
-    uniformSetters[name] = setter;
+    // getActiveUniform adds a suffix to the names of arrays
+    let isArray = (name.slice(-3) === "[0]");
+    let key = (isArray)
+      ? name.slice(0, -3)
+      : name;
+
+    uniformSetters[key] = createUniformSetter(loc, type, isArray, size);
   }
+
   return uniformSetters;
 
   // This function must be nested to access the textureUnit index
-  function createUniformSetter(program, uniformInfo) {
-    var loc = gl.getUniformLocation(program, uniformInfo.name);
-    var isArray = (uniformInfo.size > 1 && uniformInfo.name.substr(-3) === "[0]");
-    var type = uniformInfo.type;
+  function createUniformSetter(loc, type, isArray, size) {
     switch (type) {
       case gl.FLOAT:
         return (isArray)
@@ -297,26 +372,23 @@ function createUniformSetters(gl, program) {
         return (v) => gl.uniformMatrix4fv(loc, false, v);
       case gl.SAMPLER_2D:
       case gl.SAMPLER_CUBE:
+        var bindPoint = getBindPointForSamplerType(gl, type);
         if (isArray) {
-          var units = Array.from(Array(uniformInfo.size), () => textureUnit++);
-          return function(bindPoint, units) {
-            return function(textures) {
-              gl.uniform1iv(loc, units);
-              textures.forEach( function(texture, index) {
-                gl.activeTexture(gl.TEXTURE0 + units[index]);
-                gl.bindTexture(bindPoint, texture);
-              });
-            };
-          }(getBindPointForSamplerType(gl, type), units);
-        } else {
-          return function(bindPoint, unit) {
-            return function(texture) {
-              //gl.uniform1i(loc, units); // Typo? How did it even work?
-              gl.uniform1i(loc, unit);
-              gl.activeTexture(gl.TEXTURE0 + unit);
+          var units = Array.from(Array(size), () => textureUnit++);
+          return function(textures) {
+            gl.uniform1iv(loc, units);
+            textures.forEach( function(texture, index) {
+              gl.activeTexture(gl.TEXTURE0 + units[index]);
               gl.bindTexture(bindPoint, texture);
-            };
-          }(getBindPointForSamplerType(gl, type), textureUnit++);
+            });
+          };
+        } else {
+          var unit = textureUnit++;
+          return function(texture) {
+            gl.uniform1i(loc, unit);
+            gl.activeTexture(gl.TEXTURE0 + unit);
+            gl.bindTexture(bindPoint, texture);
+          };
         }
      default:  // we should never get here
         throw("unknown type: 0x" + type.toString(16));
@@ -331,9 +403,9 @@ function getBindPointForSamplerType(gl, type) {
 }
 
 function setUniforms(setters, values) {
-  Object.keys(values).forEach( function(name) {
-    var setter = setters[name];
-    if (setter) setter(values[name]);
+  Object.entries(values).forEach(([key, val]) => {
+    var setter = setters[key];
+    if (setter) setter(val);
   });
 }
 
@@ -352,7 +424,6 @@ function initShaderProgram(gl, vsSource, fsSource) {
   if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
     throw Error('Unable to initialize the shader program: \n' +
         gl.getProgramInfoLog(shaderProgram) );
-    return null;
   }
 
   return {
@@ -371,11 +442,81 @@ function loadShader(gl, type, source) {
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     throw Error('An error occurred compiling the shaders: \n' +
         gl.getShaderInfoLog(shader) );
-    gl.deleteShader(shader);
-    return null;
   }
 
   return shader;
+}
+
+function getVao(gl, program, attributeState) {
+  const { attributes, indices } = attributeState;
+
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+
+  Object.entries(attributes).forEach(([name, a]) => {
+    var index = gl.getAttribLocation(program, name);
+    if (index < 0) return;
+
+    gl.enableVertexAttribArray(index);
+    gl.bindBuffer(gl.ARRAY_BUFFER, a.buffer);
+    gl.vertexAttribPointer(
+      index, // index of attribute in program
+      a.numComponents || a.size, // Number of elements to read per vertex
+      a.type || gl.FLOAT, // Type of each element
+      a.normalize || false, // Whether to normalize it
+      a.stride || 0, // Byte spacing between vertices
+      a.offset || 0 // Byte # to start reading from
+    );
+    gl.vertexAttribDivisor(index, a.divisor || 0);
+  });
+
+  if (indices) gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indices.buffer);
+
+  gl.bindVertexArray(null);
+  return vao;
+}
+
+function initProgram(gl, vertexSrc, fragmentSrc) {
+  const program = gl.createProgram();
+  gl.attachShader(program, loadShader$1(gl, gl.VERTEX_SHADER, vertexSrc));
+  gl.attachShader(program, loadShader$1(gl, gl.FRAGMENT_SHADER, fragmentSrc));
+  gl.linkProgram(program);
+
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    fail("Unable to link the program", gl.getProgramInfoLog(program));
+  }
+
+  const uniformSetters = createUniformSetters(gl, program);
+
+  function constructVao(attributeState) {
+    return getVao(gl, program, attributeState);
+  }
+
+  function setupDraw({ uniforms, vao }) {
+    gl.useProgram(program);
+    setUniforms(uniformSetters, uniforms);
+    gl.bindVertexArray(vao);
+  }
+
+  return { gl, constructVao, setupDraw };
+}
+
+function loadShader$1(gl, type, source) {
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    let log = gl.getShaderInfoLog(shader);
+    gl.deleteShader(shader);
+    fail("An error occured compiling the shader", log);
+  }
+
+  return shader;
+}
+
+function fail(msg, log) {
+  throw Error("yawgl.initProgram: " + msg + ":\n" + log);
 }
 
 function drawScene(gl, programInfo, bufferInfo, uniforms, viewport) {
@@ -631,4 +772,4 @@ function loadCubeMapTexture(gl, urlArray, callBack) {
   return texture;
 }
 
-export { clearRect, drawOver, drawScene, initQuadBuffers, initShaderProgram, initTexture, initView, initViewport, loadCubeMapTexture, loadTexture, resizeCanvasToDisplaySize };
+export { clearRect, drawOver, drawScene, getExtendedContext, initProgram, initQuadBuffers, initShaderProgram, initTexture, initView, initViewport, loadCubeMapTexture, loadTexture, resizeCanvasToDisplaySize };
