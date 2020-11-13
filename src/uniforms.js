@@ -30,8 +30,11 @@ export function createUniformSetters(gl, program) {
 
   return uniformInfo.reduce((d, info) => {
     let { name, type, size } = info;
-    let key = name.endsWith("[0]") ? name.slice(0, -3) : name;
+    let isArray = name.endsWith("[0]");
+    let key = isArray ? name.slice(0, -3) : name;
 
+    //let setter = createUniformSetter(gl, program, info, textureUnit);
+    //d[key] = wrapSetter(setter, isArray, type, size);
     d[key] = createUniformSetter(gl, program, info, textureUnit);
 
     if (type === gl.TEXTURE_2D || type === gl.TEXTURE_CUBE_MAP) {
@@ -40,6 +43,28 @@ export function createUniformSetters(gl, program) {
 
     return d;
   }, {});
+
+  function wrapSetter(setter, isArray, type, size) {
+    const len = typeSizes[type];
+    const isPrimitive = (!isArray && len === 1 && size === 1);
+    var value, isEqual, update;
+
+    if (isPrimitive) {
+      value = 0.0;
+      isEqual = v => v == value;
+      update = v => { value = v; };
+    } else {
+      value = Array(len * size).fill(0.0);
+      isEqual = v => value.every((e, i) => v[i] == e);
+      update = v => { value = v.slice(); };
+    }
+
+    return function(v) {
+      if (isEqual(v)) return;
+      update(v);
+      setter(v);
+    };
+  }
 }
 
 export function setUniforms(setters, values) {

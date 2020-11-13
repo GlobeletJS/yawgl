@@ -13,17 +13,14 @@ export function initProgram(gl, vertexSrc, fragmentSrc) {
 
   const uniformSetters = createUniformSetters(gl, program);
 
-  function constructVao(attributeState) {
-    return getVao(gl, program, attributeState);
-  }
-
-  function setupDraw({ uniforms, vao }) {
+  function setupDraw(uniforms) {
     gl.useProgram(program);
     setUniforms(uniformSetters, uniforms);
-    gl.bindVertexArray(vao);
   }
 
-  return { gl, constructVao, setupDraw };
+  return { gl, setupDraw,
+    constructVao: (attributeState) => getVao(gl, program, attributeState),
+  };
 }
 
 function loadShader(gl, type, source) {

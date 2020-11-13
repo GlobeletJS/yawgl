@@ -409,8 +409,11 @@ function createUniformSetters(gl, program) {
 
   return uniformInfo.reduce((d, info) => {
     let { name, type, size } = info;
-    let key = name.endsWith("[0]") ? name.slice(0, -3) : name;
+    let isArray = name.endsWith("[0]");
+    let key = isArray ? name.slice(0, -3) : name;
 
+    //let setter = createUniformSetter(gl, program, info, textureUnit);
+    //d[key] = wrapSetter(setter, isArray, type, size);
     d[key] = createUniformSetter(gl, program, info, textureUnit);
 
     if (type === gl.TEXTURE_2D || type === gl.TEXTURE_CUBE_MAP) {
@@ -507,17 +510,14 @@ function initProgram(gl, vertexSrc, fragmentSrc) {
 
   const uniformSetters = createUniformSetters(gl, program);
 
-  function constructVao(attributeState) {
-    return getVao(gl, program, attributeState);
-  }
-
-  function setupDraw({ uniforms, vao }) {
+  function setupDraw(uniforms) {
     gl.useProgram(program);
     setUniforms(uniformSetters, uniforms);
-    gl.bindVertexArray(vao);
   }
 
-  return { gl, constructVao, setupDraw };
+  return { gl, setupDraw,
+    constructVao: (attributeState) => getVao(gl, program, attributeState),
+  };
 }
 
 function loadShader$1(gl, type, source) {
