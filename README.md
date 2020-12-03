@@ -30,6 +30,13 @@ them yet, your best options are to either:
 - Go to [WebGL Fundamentals] and learn them, OR
 - Use a more complete library like [three.js]
 
+## TODO
+- Update dependencies (satellite-view) to always use VAOs via the extended
+  context
+- Delete attributes.js, initShader.js, draw.js?
+- Check tile-gl for possible new functionality
+- Consider optional change-tracking to avoid repeat uniform setting
+
 [WebGL Fundamentals]: https://webglfundamentals.org/
 [greggman's module]: https://github.com/greggman/webgl-fundamentals/blob/master/webgl/resources/webgl-utils.js
 [lots of WebGL libraries]: https://gist.github.com/dmnsgn/76878ba6903cf15789b712464875cfdc

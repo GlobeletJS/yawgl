@@ -1,4 +1,4 @@
-import { createUniformSetters, setUniforms } from "./uniforms.js";
+import { createUniformSetters } from "./uniforms.js";
 import { getVao } from "./vao.js";
 
 export function initProgram(gl, vertexSrc, fragmentSrc) {
@@ -11,14 +11,9 @@ export function initProgram(gl, vertexSrc, fragmentSrc) {
     fail("Unable to link the program", gl.getProgramInfoLog(program));
   }
 
-  const uniformSetters = createUniformSetters(gl, program);
-
-  function setupDraw(uniforms) {
-    gl.useProgram(program);
-    setUniforms(uniformSetters, uniforms);
-  }
-
-  return { gl, setupDraw,
+  return {
+    uniformSetters: createUniformSetters(gl, program),
+    use: () => gl.useProgram(program),
     constructVao: (attributeState) => getVao(gl, program, attributeState),
   };
 }
