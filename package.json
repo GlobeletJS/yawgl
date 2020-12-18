@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/GlobeletJS/yawgl#readme",
   "devDependencies": {
-    "rollup": "^2.4.0",
+    "rollup": "^2.34.1",
     "rollup-plugin-node-resolve": "^5.2.0"
   },
   "dependencies": {}

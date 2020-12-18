@@ -21,11 +21,13 @@ export function createUniformSetters(gl, program) {
     [gl.SAMPLER_CUBE]: 1,
   };
 
-  const numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-  const uniformInfo = Array.from({ length: numUniforms })
+  // Collect info about all the uniforms used by the program
+  const uniformInfo = Array
+    .from({ length: gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS) })
     .map((v, i) => gl.getActiveUniform(program, i))
     .filter(info => info !== undefined);
 
+  const textureTypes = [gl.SAMPLER_2D, gl.SAMPLER_CUBE];
   var textureUnit = 0;
 
   return uniformInfo.reduce((d, info) => {
@@ -37,9 +39,7 @@ export function createUniformSetters(gl, program) {
     //d[key] = wrapSetter(setter, isArray, type, size);
     d[key] = createUniformSetter(gl, program, info, textureUnit);
 
-    if (type === gl.TEXTURE_2D || type === gl.TEXTURE_CUBE_MAP) {
-      textureUnit += size;
-    }
+    if (textureTypes.includes(type)) textureUnit += size;
 
     return d;
   }, {});
