@@ -9,8 +9,12 @@ export function initAttributes(gl, program) {
   // vertex attribute, when a per-vertex buffer is not needed
   const constantSetters = Object.entries(attrIndices).reduce((d, [name, i]) => {
     d[name] = function(v) {
-      if (![1, 2, 3, 4].includes(v.length)) return;
       gl.disableVertexAttribArray(i);
+
+      // For float attributes, the supplied value may be a Number
+      if (v.length === undefined) return gl.vertexAttrib1f(i, v);
+
+      if (![1, 2, 3, 4].includes(v.length)) return;
       const methodName = "vertexAttrib" + v.length + "fv";
       gl[methodName](i, v);
     };
