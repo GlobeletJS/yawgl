@@ -9,7 +9,7 @@ export function getExtendedContext(canvas) {
   const universalExtensions = [
     "ANGLE_instanced_arrays",
     "EXT_blend_minmax",
-    "OES_element_index_unit",
+    "OES_element_index_uint",
     "OES_standard_derivatives",
     "OES_vertex_array_object",
     "WEBGL_debug_renderer_info",
@@ -39,7 +39,10 @@ export function getExtendedContext(canvas) {
 function getAndApplyExtension(gl, name) {
   // https://webgl2fundamentals.org/webgl/lessons/webgl1-to-webgl2.html
   const ext = gl.getExtension(name);
-  if (!ext) return null;
+  if (!ext) {
+    console.log("yawgl: WebGL extension " + name + " not supported!");
+    return null;
+  }
 
   const fnSuffix = name.split("_")[0];
   const enumSuffix = '_' + fnSuffix;
