@@ -357,7 +357,7 @@ function createUniformSetter(gl, program, info, textureUnit) {
   }
 
   function getTextureSetter(bindPoint) {
-    return (size > 1)
+    return (isArray)
       ? buildTextureArraySetter(bindPoint)
       : buildTextureSetter(bindPoint);
   }
