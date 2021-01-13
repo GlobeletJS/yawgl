@@ -12,3 +12,4 @@ export { drawScene, drawOver, clearRect } from "./draw.js";
 
 export { initTexture, loadTexture } from "./tex-2d.js";
 export { loadCubeMapTexture } from "./tex-cubemap.js";
+export { initFramebuffer } from "./framebuffer.js";

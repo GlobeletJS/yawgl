@@ -816,4 +816,41 @@ function loadCubeMapTexture(gl, urlArray, callBack) {
   return texture;
 }
 
-export { clearRect, drawOver, drawScene, getExtendedContext, initProgram, initQuadBuffers, initShaderProgram, initTexture, initView, initViewport, loadCubeMapTexture, loadTexture, resizeCanvasToDisplaySize };
+function initFramebuffer(gl, width, height) {
+  // 1. Create a texture of the desired size
+  const target = gl.TEXTURE_2D;
+  const level = 0;
+  const format = gl.RGBA;
+  const type = gl.UNSIGNED_BYTE;
+  const border = 0;
+
+  const texture = gl.createTexture();
+  gl.bindTexture(target, texture);
+
+  gl.texImage2D(target, level, format, width, height, border,
+    format, type, null);
+
+  // Set up mipmaps
+  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(target, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  setTextureAnisotropy(gl, target);
+  gl.generateMipmap(target);
+
+  // 2. Create a framebuffer and attach the texture
+  const buffer = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, buffer);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+    target, texture, level);
+
+  gl.bindTexture(target, null);
+
+  return {
+    buffer,
+    // TODO: make it resizable?
+    size: { width, height },
+    sampler: texture,
+  };
+}
+
+export { clearRect, drawOver, drawScene, getExtendedContext, initFramebuffer, initProgram, initQuadBuffers, initShaderProgram, initTexture, initView, initViewport, loadCubeMapTexture, loadTexture, resizeCanvasToDisplaySize };
