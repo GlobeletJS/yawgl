@@ -1,46 +1,46 @@
-export function createAttributeSetters(gl, program) {
-  // Very similar to greggman's module:
-  // webglfundamentals.org/docs/module-webgl-utils.html#.createAttributeSetters
-  var attribSetters = {};
-  var numAttribs = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
-  for (let i = 0; i < numAttribs; i++) {
-    var attribInfo = gl.getActiveAttrib(program, i);
-    if (!attribInfo) break;
-    var index = gl.getAttribLocation(program, attribInfo.name);
-    attribSetters[attribInfo.name] = createAttribSetter(gl, index);
+export function initAttributeMethods(gl) {
+  return { createBuffer, initAttribute, initIndices, initQuad };
+
+  function createBuffer(data, bindPoint = gl.ARRAY_BUFFER) {
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(bindPoint, buffer);
+    gl.bufferData(bindPoint, data, gl.STATIC_DRAW);
+    return buffer;
   }
-  return attribSetters;
-}
 
-function createAttribSetter(gl, index) {
-  return function(b) {
-    // Enable this attribute (shader attributes are disabled by default)
-    gl.enableVertexAttribArray(index);
-    // Bind the buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, b.buffer);
-    // Point the attribute in the program to this buffer,
-    // and tell the program the byte layout in the buffer
-    gl.vertexAttribPointer(
-        index,                      // index of attribute in program
-        b.numComponents || b.size,  // Number of elements to read per vertex
-        b.type || gl.FLOAT,         // Type of each element
-        b.normalize || false,       // Whether to normalize it
-        b.stride || 0,              // Byte spacing between vertices
-        b.offset || 0               // Byte # to start reading from
-        );
-  };
-}
+  function initAttribute(options) {
+    // Set defaults for unsupplied values
+    const {
+      buffer = createBuffer(options.data),
+      numComponents = 3,
+      type = gl.FLOAT,
+      normalize = false,
+      stride = 0,
+      offset = 0,
+      divisor = 1,
+    } = options;
 
-export function setBuffersAndAttributes(gl, setters, buffers) {
-  setAttributes(setters, buffers.attributes);
-  if (buffers.indices) {
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices.buffer);
+    // Return attribute state object
+    return { buffer, numComponents, type, normalize, stride, offset, divisor };
   }
-}
 
-function setAttributes(setters, attribs) {
-  Object.keys(attribs).forEach( function(name) {
-    var setter = setters[name];
-    if (setter) setter( attribs[name] );
-  });
+  function initIndices(options) {
+    const {
+      buffer = createBuffer(options.data, gl.ELEMENT_ARRAY_BUFFER),
+      type = gl.UNSIGNED_INT,
+      offset = 0,
+    } = options;
+
+    return { buffer, type, offset };
+  }
+
+  function initQuad({ x0 = -1.0, y0 = -1.0, x1 = 1.0, y1 = 1.0 } = {}) {
+    // Create a buffer with the position of the vertices within one instance
+    const data = new Float32Array([
+      x0, y0,  x1, y0,  x1, y1,
+      x0, y0,  x1, y1,  x0, y1,
+    ]);
+
+    return initAttribute({ data, numComponents: 2, divisor: 0 });
+  }
 }

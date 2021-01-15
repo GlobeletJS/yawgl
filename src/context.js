@@ -1,76 +1,50 @@
-export function getExtendedContext(canvas) {
-  const haveCanvas = canvas instanceof Element;
-  if (!haveCanvas || canvas.tagName.toLowerCase() !== "canvas") {
-    throw Error("ERROR in yawgl.getExtendedContext: not a valid Canvas!");
-  }
+import { initProgram } from "./program.js";
+import { initAttributeMethods } from "./attributes.js";
 
-  // developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
-  //   #Take_advantage_of_universally_supported_WebGL_1_extensions
-  const universalExtensions = [
-    "ANGLE_instanced_arrays",
-    "EXT_blend_minmax",
-    "OES_element_index_uint",
-    "OES_standard_derivatives",
-    "OES_vertex_array_object",
-    "WEBGL_debug_renderer_info",
-    "WEBGL_lose_context"
-  ];
+export function initContext(gl) {
+  // Input is an extended WebGL context, as created by yawgl.getExtendedContext
+  gl.disable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-  // Get a WebGL context, and extend it
-  const gl = canvas.getContext("webgl");
-  universalExtensions.forEach(ext => getAndApplyExtension(gl, ext));
+  const api = { gl,
+    initProgram: (vert, frag) => initProgram(gl, vert, frag),
 
-  // Modify the shaderSource method to add a preamble
-  const SHADER_PREAMBLE = `
-#extension GL_OES_standard_derivatives : enable
-#line 1
-`;
-  const shaderSource = gl.shaderSource;
-  gl.shaderSource = function(shader, source) {
-    const modified = (source.indexOf("GL_OES_standard_derivatives") < 0)
-      ? SHADER_PREAMBLE + source
-      : source;
-    shaderSource.call(gl, shader, modified);
+    bindFramebufferAndSetViewport,
+    clear,
+    clipRect,
+    draw,
   };
 
-  return gl;
-}
+  return Object.assign(api, initAttributeMethods(gl));
 
-function getAndApplyExtension(gl, name) {
-  // https://webgl2fundamentals.org/webgl/lessons/webgl1-to-webgl2.html
-  const ext = gl.getExtension(name);
-  if (!ext) {
-    console.log("yawgl: WebGL extension " + name + " not supported!");
-    return null;
+  function bindFramebufferAndSetViewport(framebuffer, size = gl.canvas) {
+    let { width, height } = size;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.viewport(0, 0, width, height);
   }
 
-  const fnSuffix = name.split("_")[0];
-  const enumSuffix = '_' + fnSuffix;
+  function clear(color = [0.0, 0.0, 0.0, 0.0]) {
+    gl.disable(gl.SCISSOR_TEST);
+    gl.clearColor(...color);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
 
-  for (const key in ext) {
-    const value = ext[key];
-    const isFunc = typeof value === 'function';
-    const suffix = isFunc ? fnSuffix : enumSuffix;
-    let name = key;
-    // examples of where this is not true are WEBGL_compressed_texture_s3tc
-    // and WEBGL_compressed_texture_pvrtc
-    if (key.endsWith(suffix)) {
-      name = key.substring(0, key.length - suffix.length);
-    }
-    if (gl[name] !== undefined) {
-      if (!isFunc && gl[name] !== value) {
-        console.warn("conflict:", name, gl[name], value, key);
-      }
-    } else if (isFunc) {
-      gl[name] = (function(origFn) {
-        return function() {
-          return origFn.apply(ext, arguments);
-        };
-      })(value);
+  function clipRect(x, y, width, height) {
+    gl.enable(gl.SCISSOR_TEST);
+    let roundedArgs = [x, y, width, height].map(Math.round);
+    gl.scissor(...roundedArgs);
+  }
+
+  function draw({ vao, indices, count = 6, instanceCount = 1 }) {
+    const mode = gl.TRIANGLES;
+    gl.bindVertexArray(vao);
+    if (indices) {
+      let { type, offset } = indices;
+      gl.drawElementsInstanced(mode, count, type, offset, instanceCount);
     } else {
-      gl[name] = value;
+      gl.drawArraysInstanced(mode, 0, count, instanceCount);
     }
+    gl.bindVertexArray(null);
   }
-
-  return ext;
 }
