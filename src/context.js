@@ -1,5 +1,6 @@
 import { initProgram } from "./program.js";
 import { initAttributeMethods } from "./attributes.js";
+import { initTextureMethods } from "./textures.js";
 
 export function initContext(gl) {
   // Input is an extended WebGL context, as created by yawgl.getExtendedContext
@@ -16,11 +17,12 @@ export function initContext(gl) {
     draw,
   };
 
-  return Object.assign(api, initAttributeMethods(gl));
+  return Object.assign(api, initAttributeMethods(gl), initTextureMethods(gl));
 
-  function bindFramebufferAndSetViewport(framebuffer, size = gl.canvas) {
+  function bindFramebufferAndSetViewport(options = {}) {
+    const { buffer = null, size = gl.canvas } = options;
     let { width, height } = size;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, buffer);
     gl.viewport(0, 0, width, height);
   }
 

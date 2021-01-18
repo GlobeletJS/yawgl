@@ -3,6 +3,7 @@ export function getExtendedContext(canvas) {
   if (!haveCanvas || canvas.tagName.toLowerCase() !== "canvas") {
     throw Error("ERROR in yawgl.getExtendedContext: not a valid Canvas!");
   }
+  const gl = canvas.getContext("webgl");
 
   // developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
   //   #Take_advantage_of_universally_supported_WebGL_1_extensions
@@ -15,9 +16,6 @@ export function getExtendedContext(canvas) {
     "WEBGL_debug_renderer_info",
     "WEBGL_lose_context"
   ];
-
-  // Get a WebGL context, and extend it
-  const gl = canvas.getContext("webgl");
   universalExtensions.forEach(ext => getAndApplyExtension(gl, ext));
 
   // Modify the shaderSource method to add a preamble
@@ -39,10 +37,7 @@ export function getExtendedContext(canvas) {
 function getAndApplyExtension(gl, name) {
   // https://webgl2fundamentals.org/webgl/lessons/webgl1-to-webgl2.html
   const ext = gl.getExtension(name);
-  if (!ext) {
-    console.log("yawgl: WebGL extension " + name + " not supported!");
-    return null;
-  }
+  if (!ext) return console.log("yawgl: extension " + name + " not supported!");
 
   const fnSuffix = name.split("_")[0];
   const enumSuffix = '_' + fnSuffix;
@@ -51,26 +46,21 @@ function getAndApplyExtension(gl, name) {
     const value = ext[key];
     const isFunc = typeof value === 'function';
     const suffix = isFunc ? fnSuffix : enumSuffix;
-    let name = key;
-    // examples of where this is not true are WEBGL_compressed_texture_s3tc
-    // and WEBGL_compressed_texture_pvrtc
-    if (key.endsWith(suffix)) {
-      name = key.substring(0, key.length - suffix.length);
-    }
-    if (gl[name] !== undefined) {
-      if (!isFunc && gl[name] !== value) {
-        console.warn("conflict:", name, gl[name], value, key);
+    const glKey = (key.endsWith(suffix))
+      ? key.substring(0, key.length - suffix.length)
+      : key;
+    if (gl[glKey] !== undefined) {
+      if (!isFunc && gl[glKey] !== value) {
+        console.warn("conflict:", name, gl[glKey], value, key);
       }
     } else if (isFunc) {
-      gl[name] = (function(origFn) {
+      gl[glKey] = (function(origFn) {
         return function() {
           return origFn.apply(ext, arguments);
         };
       })(value);
     } else {
-      gl[name] = value;
+      gl[glKey] = value;
     }
   }
-
-  return ext;
 }

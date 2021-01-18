@@ -332,6 +332,100 @@ function initAttributeMethods(gl) {
   }
 }
 
+function initMipMapper(gl, target) {
+  const isPowerOf2 = (v) => Math.log2(v) % 1 == 0;
+  const setAnisotropy = setupAnisotropy(gl, target);
+
+  return function({ mips = true, width, height }) {
+    if (mips && isPowerOf2(width) && isPowerOf2(height)) {
+      setAnisotropy();
+      gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.generateMipmap(target);
+    } else {
+      // WebGL1 can't handle mipmapping for non-power-of-2 images
+      gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
+  };
+}
+
+function setupAnisotropy(gl, target) {
+  const ext = (
+    gl.getExtension('EXT_texture_filter_anisotropic') ||
+    gl.getExtension('MOZ_EXT_texture_filter_anisotropic') || 
+    gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+  );
+  if (!ext) return () => undefined;
+
+  const maxAnisotropy = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+  const pname = ext.TEXTURE_MAX_ANISOTROPY_EXT;
+
+  // BEWARE: this texParameterf call is slow on Intel integrated graphics.
+  return () => gl.texParameterf(target, pname, maxAnisotropy);
+}
+
+function initTextureMethods(gl) {
+  const target = gl.TEXTURE_2D;
+  const level = 0; // Mipmap level for image uploads
+  const type = gl.UNSIGNED_BYTE;
+  const border = 0;
+  const getMips = initMipMapper(gl, target);
+
+  return { initTexture, initFramebuffer };
+
+  function initTexture(options) {
+    const {
+      format = gl.RGBA,
+      image, // ImageData, HTMLImageElement, HTMLCanvasElement, ImageBitmap
+      data = null,  // ArrayBufferView
+      mips = true,
+      wrapS = gl.CLAMP_TO_EDGE,
+      wrapT = gl.CLAMP_TO_EDGE,
+    } = options;
+
+    // For Image input, get size from element. Otherwise it must be supplied
+    const { 
+      width = 1, 
+      height = 1,
+    } = (image) ? image : options;
+
+    const texture = gl.createTexture();
+    gl.bindTexture(target, texture);
+
+    gl.texParameteri(target, gl.TEXTURE_WRAP_S, wrapS);
+    gl.texParameteri(target, gl.TEXTURE_WRAP_T, wrapT);
+    if (format !== gl.RGBA) gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+
+    if (image) {
+      gl.texImage2D(target, level, format, format, type, image);
+    } else {
+      gl.texImage2D(target, level, format,
+        width, height, border, format, type, data);
+    }
+
+    getMips({ mips, width, height });
+
+    return texture;
+  }
+
+  function initFramebuffer({ width, height }) {
+    const texture = initTexture({ width, height });
+
+    const buffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, buffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+      target, texture, level);
+
+    gl.bindTexture(target, null);
+
+    return {
+      buffer,
+      // TODO: make it resizable?
+      size: { width, height },
+      sampler: texture,
+    };
+  }
+}
+
 function initContext(gl) {
   // Input is an extended WebGL context, as created by yawgl.getExtendedContext
   gl.disable(gl.DEPTH_TEST);
@@ -347,11 +441,12 @@ function initContext(gl) {
     draw,
   };
 
-  return Object.assign(api, initAttributeMethods(gl));
+  return Object.assign(api, initAttributeMethods(gl), initTextureMethods(gl));
 
-  function bindFramebufferAndSetViewport(framebuffer, size = gl.canvas) {
+  function bindFramebufferAndSetViewport(options = {}) {
+    const { buffer = null, size = gl.canvas } = options;
     let { width, height } = size;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, buffer);
     gl.viewport(0, 0, width, height);
   }
 
@@ -516,220 +611,4 @@ function resizeCanvasToDisplaySize(canvas, multiplier) {
   return true;
 }
 
-function setupMipMaps(gl, target, width, height) {
-  // We are using WebGL1 (for compatibility with mobile browsers) which can't
-  // handle mipmapping for non-power-of-2 images. Maybe we should provide
-  // pre-computed mipmaps? see https://stackoverflow.com/a/21540856/10082269
-  if (isPowerOf2(width) && isPowerOf2(height)) {
-    gl.generateMipmap(target);
-    // Clamp to avoid wrapping around poles
-    // TODO: this may not work with circular coordinates?
-    gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  } else { // Turn off mipmapping 
-    gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    // Set wrapping to clamp to edge
-    gl.texParameteri(target, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  }
-  return;
-}
-
-function setTextureAnisotropy(gl, target) {
-  var ext = (
-      gl.getExtension('EXT_texture_filter_anisotropic') ||
-      gl.getExtension('MOZ_EXT_texture_filter_anisotropic') || 
-      gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
-      );
-  if (ext) {
-    var maxAnisotropy = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-    // BEWARE: this texParameterf call is slow on Intel integrated graphics.
-    // Avoid this entire function if at all possible.
-    gl.texParameterf(target, ext.TEXTURE_MAX_ANISOTROPY_EXT, 
-        maxAnisotropy);
-  }
-  return;
-}
-
-function isPowerOf2(value) {
-  // This trick uses bitwise operators.
-  // See https://stackoverflow.com/a/30924333/10082269
-  return value && !(value & (value - 1));
-  // For a better explanation, with some errors in the solution, see
-  // https://stackoverflow.com/a/30924360/10082269
-}
-
-function initTexture(gl, width, height) {
-  // Initializes a 2D texture object, extending the default gl.createTexture()
-  // The GL context and the binding target are implicitly saved in the closure.
-  // Returns the sampler (as a property) along with update and replace methods.
-  // Input data is an ImageData object
-
-  const target = gl.TEXTURE_2D;
-  const texture = gl.createTexture();
-  gl.bindTexture(target, texture);
-
-  // Initialize with default parameters
-  const level = 0;  // Mipmap level
-  const internalFormat = gl.RGBA;
-  const srcFormat = gl.RGBA;
-  const srcType = gl.UNSIGNED_BYTE;
-  const border = 0;
-
-  gl.texImage2D(target, level, internalFormat, width, height, border,
-      srcFormat, srcType, null);
-
-  // Set up mipmapping and anisotropic filtering, if appropriate
-  setupMipMaps(gl, target, width, height);
-  setTextureAnisotropy(gl, target);
-
-  return {
-    sampler: texture,
-    replace,
-    update,
-  }
-
-  function replace( image ) {
-    // Replaces the texture with the supplied image data
-    // WARNING: will change texture width/height to match the image
-    gl.bindTexture(target, texture);
-    gl.texImage2D(target, level, internalFormat, srcFormat, srcType, image);
-
-    // Re-do mipmap setup, since width/height may have changed
-    setupMipMaps(gl, target, image.width, image.height);
-    return;
-  }
-
-  function update( image ) {
-    // Updates a portion of the texture with the supplied image data.
-    gl.bindTexture(target, texture);
-
-    // Image will be written starting from the pixel (xoffset, yoffset).
-    // If these values are not set on the input, use (0,0)
-    var xoff = image.xoffset || 0;
-    var yoff = image.yoffset || 0;
-    gl.texSubImage2D(target, level, xoff, yoff, srcFormat, srcType, image);
-
-    setupMipMaps(gl, target, image.width, image.height);
-    return;
-  }
-}
-
-function loadTexture(gl, url, callBack) {
-  // Initialize a single-pixel image to use before the supplied image loads
-  const width = 1;
-  const height = 1;
-  const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
-  const dummy = new ImageData(width, height, pixel);
-
-  const texture = initTexture(gl, dummy);
-
-  // Load image asynchronously from supplied URL
-  const image = new Image();
-  image.onload = function () {
-    texture.replace(image);
-    callBack();
-  };
-  image.src = url;
-
-  return texture.sampler;
-}
-
-function loadCubeMapTexture(gl, urlArray, callBack) {
-  const texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
-
-  // Initialize a single-pixel image to use before the supplied image load
-  const level = 0;                 // Mipmap level
-  const internalFormat = gl.RGBA;  // 4 values per pixel
-  const width = 1;
-  const height = 1;
-  const border = 0;
-  const srcFormat = gl.RGBA;
-  const srcType = gl.UNSIGNED_BYTE;
-  const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
-  for (let i = 0; i < 6; i++) {
-    gl.texImage2D( gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, level, internalFormat,
-        width, height, border, srcFormat, srcType, pixel );
-  }
-
-  // Load images asynchronously from supplied URLs
-  const images = [];
-  var imagesLoaded = 0;
-  for (let i = 0; i < 6; i++) {
-    images[i] = new Image();
-    images[i].onload = loadImagesToCubeMap;
-    images[i].src = urlArray[i];
-  }
-  function loadImagesToCubeMap() {
-    // Count calls, and confirm we have all 6 images before proceeding
-    imagesLoaded++;
-    if (imagesLoaded < 6) return;
-
-    // Set up cubemap texture
-    gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
-    for (let i = 0; i < 6; i++) {
-      gl.texImage2D( gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, level, internalFormat,
-          srcFormat, srcType, images[i] );
-    }
-
-    // Generate mipmaps -- watch out for seams!
-    // It may be better to generate them externally. Use AMD's cubemapgen? See
-    // https://www.reddit.com/r/opengl/comments/38tlww/accessing_cubemaps_mipmap_level/
-    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-    // Set some parameters for edge handling in WebGL1, following
-    // http://www.alecjacobson.com/weblog/?p=1871
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    //gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    //gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
-
-    // Check for anisotropic filtering, and use it if available
-    setTextureAnisotropy(gl, gl.TEXTURE_CUBE_MAP);
-
-    // Callback to let the calling program know everything is finally loaded
-    callBack();
-  }
-
-  return texture;
-}
-
-function initFramebuffer(gl, width, height) {
-  // 1. Create a texture of the desired size
-  const target = gl.TEXTURE_2D;
-  const level = 0;
-  const format = gl.RGBA;
-  const type = gl.UNSIGNED_BYTE;
-  const border = 0;
-
-  const texture = gl.createTexture();
-  gl.bindTexture(target, texture);
-
-  gl.texImage2D(target, level, format, width, height, border,
-    format, type, null);
-
-  // Set up mipmaps
-  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-  gl.texParameteri(target, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  setTextureAnisotropy(gl, target);
-  gl.generateMipmap(target);
-
-  // 2. Create a framebuffer and attach the texture
-  const buffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, buffer);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
-    target, texture, level);
-
-  gl.bindTexture(target, null);
-
-  return {
-    buffer,
-    // TODO: make it resizable?
-    size: { width, height },
-    sampler: texture,
-  };
-}
-
-export { getExtendedContext, initContext, initFramebuffer, initProgram, initTexture, initView, initViewport, loadCubeMapTexture, loadTexture, resizeCanvasToDisplaySize };
+export { getExtendedContext, initContext, initProgram, initView, initViewport, resizeCanvasToDisplaySize };
