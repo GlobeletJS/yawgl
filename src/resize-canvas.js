@@ -3,7 +3,7 @@ export function resizeCanvasToDisplaySize(canvas, multiplier) {
   // webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
 
   // multiplier allows scaling. Example: multiplier = window.devicePixelRatio
-  if (!multiplier || multiplier < 0) multplier = 1;
+  if (!multiplier || multiplier < 0) multiplier = 1;
 
   const width = Math.floor(canvas.clientWidth * multiplier);
   const height = Math.floor(canvas.clientHeight * multiplier);

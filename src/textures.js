@@ -7,7 +7,7 @@ export function initTextureMethods(gl) {
   const border = 0;
   const getMips = initMipMapper(gl, target);
 
-  return { initTexture, initFramebuffer };
+  return { initTexture, updateMips, initFramebuffer };
 
   function initTexture(options) {
     const {
@@ -44,6 +44,11 @@ export function initTextureMethods(gl) {
     return texture;
   }
 
+  function updateMips(texture) {
+    gl.bindTexture(target, texture);
+    gl.generateMipmap(target);
+  }
+
   function initFramebuffer({ width, height }) {
     const texture = initTexture({ width, height });
 
@@ -55,10 +60,9 @@ export function initTextureMethods(gl) {
     gl.bindTexture(target, null);
 
     return {
+      sampler: texture, // TODO: rename to texture?
       buffer,
-      // TODO: make it resizable?
       size: { width, height },
-      sampler: texture,
     };
   }
 }
