@@ -66,10 +66,3 @@ export function createUniformSetters(gl, program) {
     };
   }
 }
-
-export function setUniforms(setters, values) {
-  Object.entries(values).forEach(([key, val]) => {
-    var setter = setters[key];
-    if (setter) setter(val);
-  });
-}

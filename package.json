@@ -2,7 +2,7 @@
   "name": "yawgl",
   "version": "0.3.0",
   "description": "Yet Another WebGL Library",
-  "main": "dist/yawgl.bundle.js",
+  "main": "dist/yawgl.js",
   "module": "src/index.js",
   "files": [
     "dist",
@@ -29,8 +29,7 @@
   },
   "homepage": "https://github.com/GlobeletJS/yawgl#readme",
   "devDependencies": {
-    "rollup": "^2.34.1",
-    "rollup-plugin-node-resolve": "^5.2.0"
-  },
-  "dependencies": {}
+    "@rollup/plugin-node-resolve": "^13.0.0",
+    "rollup": "^2.52.7"
+  }
 }

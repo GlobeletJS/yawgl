@@ -140,7 +140,7 @@ function createUniformSetter(gl, program, info, textureUnit) {
 }
 
 function createUniformSetters(gl, program) {
-  const typeSizes = {
+  ({
     [gl.FLOAT]: 1,
     [gl.FLOAT_VEC2]: 2,
     [gl.FLOAT_VEC3]: 3,
@@ -158,7 +158,7 @@ function createUniformSetters(gl, program) {
     [gl.FLOAT_MAT4]: 16,
     [gl.SAMPLER_2D]: 1,
     [gl.SAMPLER_CUBE]: 1,
-  };
+  });
 
   // Collect info about all the uniforms used by the program
   const uniformInfo = Array
