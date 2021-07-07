@@ -43,7 +43,7 @@ export function createUniformSetter(gl, program, info, textureUnit) {
     case gl.SAMPLER_CUBE:
       return getTextureSetter(gl.TEXTURE_CUBE_MAP);
     default:  // we should never get here
-      throw("unknown type: 0x" + type.toString(16));
+      throw "unknown type: 0x" + type.toString(16);
   }
 
   function getTextureSetter(bindPoint) {

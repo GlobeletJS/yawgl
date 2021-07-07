@@ -35,7 +35,7 @@ export function initContext(gl) {
 
   function bindFramebufferAndSetViewport(options = {}) {
     const { buffer = null, size = gl.canvas } = options;
-    let { width, height } = size;
+    const { width, height } = size;
     gl.bindFramebuffer(gl.FRAMEBUFFER, buffer);
     gl.viewport(0, 0, width, height);
   }
@@ -48,7 +48,7 @@ export function initContext(gl) {
 
   function clipRect(x, y, width, height) {
     gl.enable(gl.SCISSOR_TEST);
-    let roundedArgs = [x, y, width, height].map(Math.round);
+    const roundedArgs = [x, y, width, height].map(Math.round);
     gl.scissor(...roundedArgs);
   }
 
@@ -56,7 +56,7 @@ export function initContext(gl) {
     const mode = gl.TRIANGLES;
     gl.bindVertexArray(vao);
     if (indices) {
-      let { type, offset } = indices;
+      const { type, offset } = indices;
       gl.drawElementsInstanced(mode, count, type, offset, instanceCount);
     } else {
       gl.drawArraysInstanced(mode, 0, count, instanceCount);

@@ -24,8 +24,8 @@ export function initView(porthole, fieldOfView) {
   function computeRayParams() {
     // Compute porthole size
     portRect = porthole.getBoundingClientRect();
-    let newWidth = portRect.right - portRect.left;
-    let newHeight = portRect.bottom - portRect.top;
+    const newWidth = portRect.right - portRect.left;
+    const newHeight = portRect.bottom - portRect.top;
 
     // Exit if no change
     if (width === newWidth && height === newHeight) return false;
@@ -49,7 +49,7 @@ export function initView(porthole, fieldOfView) {
     // when the mouse is at the left top pixel in the box.
     // rect.right and .bottom are NOT equal to clientX/Y at the bottom
     // right pixel -- they are one more than the clientX/Y values.
-    // Thus the number of pixels in the box is given by 
+    // Thus the number of pixels in the box is given by
     //    porthole.clientWidth = rect.right - rect.left  (NO +1 !!)
     var x = clientX - portRect.left;
     var y = portRect.bottom - clientY - 1; // Flip sign to make +y upward
@@ -58,12 +58,12 @@ export function initView(porthole, fieldOfView) {
     // rather than pixel count, to ensure we get -1 and +1 at the ends.
     // (Confirm by considering the 2x2 case)
     var xratio = 2 * x / (width - 1) - 1;
-    var yratio = 2 * y / (height - 1) -1;
+    var yratio = 2 * y / (height - 1) - 1;
 
     rayVec[0] = xratio * maxRay[0];
     rayVec[1] = yratio * maxRay[1];
-    //rayVec[2] = -1.0;
-    //rayVec[3] = 0.0;
+    // rayVec[2] = -1.0;
+    // rayVec[3] = 0.0;
     return;
   }
 }

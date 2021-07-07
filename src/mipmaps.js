@@ -16,9 +16,9 @@ export function initMipMapper(gl, target) {
 
 function setupAnisotropy(gl, target) {
   const ext = (
-    gl.getExtension('EXT_texture_filter_anisotropic') ||
-    gl.getExtension('MOZ_EXT_texture_filter_anisotropic') || 
-    gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+    gl.getExtension("EXT_texture_filter_anisotropic") ||
+    gl.getExtension("MOZ_EXT_texture_filter_anisotropic") ||
+    gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic")
   );
   if (!ext) return () => undefined;
 

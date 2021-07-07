@@ -10,8 +10,9 @@
   ],
   "directories": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src",
     "build": "rollup -c build/rollup.config.js",
+    "test": "npm run lint",
     "postversion": "git push && git push --tags"
   },
   "repository": {
@@ -30,6 +31,8 @@
   "homepage": "https://github.com/GlobeletJS/yawgl#readme",
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^13.0.0",
+    "eslint": "^7.30.0",
+    "eslint-config-globeletjs": "^0.0.5",
     "rollup": "^2.52.7"
   }
 }

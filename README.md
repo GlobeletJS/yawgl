@@ -1,5 +1,7 @@
 # yawgl
 
+![tests](https://github.com/GlobeletJS/yawgl/actions/workflows/node.js.yml/badge.svg)
+
 Yet Another WebGL Library.
 
 An extremely lightweight library to hide some of the verbosity of the

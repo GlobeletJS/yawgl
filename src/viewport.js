@@ -14,7 +14,7 @@ export function initViewport(display, porthole) {
     element: porthole, // Back-reference
     viewport,
     changed: setViewport,
-  }
+  };
 
   function setViewport() {
     // Update rectangles. boundingClientRect is relative to browser window
@@ -24,11 +24,11 @@ export function initViewport(display, porthole) {
     // Compute relative position of porthole vs display
     // Note flipped sign of Y! getBoundingClientRect increases downward, but
     // for WebGL we want Y increasing upward
-    let bottom = dispRect.bottom - portRect.bottom;
-    let left = portRect.left - dispRect.left;
+    const bottom = dispRect.bottom - portRect.bottom;
+    const left = portRect.left - dispRect.left;
     // Compute porthole size
-    let width = portRect.right - portRect.left;
-    let height = portRect.bottom - portRect.top;
+    const width = portRect.right - portRect.left;
+    const height = portRect.bottom - portRect.top;
 
     // Exit if no change
     if (viewport.left === left && viewport.bottom === bottom &&

@@ -40,11 +40,11 @@ function getAndApplyExtension(gl, name) {
   if (!ext) return console.log("yawgl: extension " + name + " not supported!");
 
   const fnSuffix = name.split("_")[0];
-  const enumSuffix = '_' + fnSuffix;
+  const enumSuffix = "_" + fnSuffix;
 
   for (const key in ext) {
     const value = ext[key];
-    const isFunc = typeof value === 'function';
+    const isFunc = typeof value === "function";
     const suffix = isFunc ? fnSuffix : enumSuffix;
     const glKey = (key.endsWith(suffix))
       ? key.substring(0, key.length - suffix.length)

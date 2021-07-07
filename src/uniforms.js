@@ -1,26 +1,6 @@
 import { createUniformSetter } from "./uniform-setter.js";
 
 export function createUniformSetters(gl, program) {
-  const typeSizes = {
-    [gl.FLOAT]: 1,
-    [gl.FLOAT_VEC2]: 2,
-    [gl.FLOAT_VEC3]: 3,
-    [gl.FLOAT_VEC4]: 4,
-    [gl.INT]: 1,
-    [gl.INT_VEC2]: 2,
-    [gl.INT_VEC3]: 3,
-    [gl.INT_VEC4]: 4,
-    [gl.BOOL]: 1,
-    [gl.BOOL_VEC2]: 2,
-    [gl.BOOL_VEC3]: 3,
-    [gl.BOOL_VEC4]: 4,
-    [gl.FLOAT_MAT2]: 4,
-    [gl.FLOAT_MAT3]: 9,
-    [gl.FLOAT_MAT4]: 16,
-    [gl.SAMPLER_2D]: 1,
-    [gl.SAMPLER_CUBE]: 1,
-  };
-
   // Collect info about all the uniforms used by the program
   const uniformInfo = Array
     .from({ length: gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS) })
@@ -31,38 +11,14 @@ export function createUniformSetters(gl, program) {
   var textureUnit = 0;
 
   return uniformInfo.reduce((d, info) => {
-    let { name, type, size } = info;
-    let isArray = name.endsWith("[0]");
-    let key = isArray ? name.slice(0, -3) : name;
+    const { name, type, size } = info;
+    const isArray = name.endsWith("[0]");
+    const key = isArray ? name.slice(0, -3) : name;
 
-    //let setter = createUniformSetter(gl, program, info, textureUnit);
-    //d[key] = wrapSetter(setter, isArray, type, size);
     d[key] = createUniformSetter(gl, program, info, textureUnit);
 
     if (textureTypes.includes(type)) textureUnit += size;
 
     return d;
   }, {});
-
-  function wrapSetter(setter, isArray, type, size) {
-    const len = typeSizes[type];
-    const isPrimitive = (!isArray && len === 1 && size === 1);
-    var value, isEqual, update;
-
-    if (isPrimitive) {
-      value = 0.0;
-      isEqual = v => v == value;
-      update = v => { value = v; };
-    } else {
-      value = Array(len * size).fill(0.0);
-      isEqual = v => value.every((e, i) => v[i] == e);
-      update = v => { value = v.slice(); };
-    }
-
-    return function(v) {
-      if (isEqual(v)) return;
-      update(v);
-      setter(v);
-    };
-  }
 }
