@@ -5,7 +5,7 @@ export function initViewport(display, porthole) {
   // Inputs are HTML elements whose boundingClientRects match the background
   // canvas (display) and the desired area for rendering the scene (porthole)
 
-  var portRect, dispRect;
+  let portRect, dispRect;
   const viewport = {};
 
   setViewport(); // Set initial values

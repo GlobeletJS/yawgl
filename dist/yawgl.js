@@ -40,11 +40,11 @@ function getAndApplyExtension(gl, name) {
   if (!ext) return console.log("yawgl: extension " + name + " not supported!");
 
   const fnSuffix = name.split("_")[0];
-  const enumSuffix = '_' + fnSuffix;
+  const enumSuffix = "_" + fnSuffix;
 
   for (const key in ext) {
     const value = ext[key];
-    const isFunc = typeof value === 'function';
+    const isFunc = typeof value === "function";
     const suffix = isFunc ? fnSuffix : enumSuffix;
     const glKey = (key.endsWith(suffix))
       ? key.substring(0, key.length - suffix.length)
@@ -110,7 +110,7 @@ function createUniformSetter(gl, program, info, textureUnit) {
     case gl.SAMPLER_CUBE:
       return getTextureSetter(gl.TEXTURE_CUBE_MAP);
     default:  // we should never get here
-      throw("unknown type: 0x" + type.toString(16));
+      throw "unknown type: 0x" + type.toString(16);
   }
 
   function getTextureSetter(bindPoint) {
@@ -140,26 +140,6 @@ function createUniformSetter(gl, program, info, textureUnit) {
 }
 
 function createUniformSetters(gl, program) {
-  ({
-    [gl.FLOAT]: 1,
-    [gl.FLOAT_VEC2]: 2,
-    [gl.FLOAT_VEC3]: 3,
-    [gl.FLOAT_VEC4]: 4,
-    [gl.INT]: 1,
-    [gl.INT_VEC2]: 2,
-    [gl.INT_VEC3]: 3,
-    [gl.INT_VEC4]: 4,
-    [gl.BOOL]: 1,
-    [gl.BOOL_VEC2]: 2,
-    [gl.BOOL_VEC3]: 3,
-    [gl.BOOL_VEC4]: 4,
-    [gl.FLOAT_MAT2]: 4,
-    [gl.FLOAT_MAT3]: 9,
-    [gl.FLOAT_MAT4]: 16,
-    [gl.SAMPLER_2D]: 1,
-    [gl.SAMPLER_CUBE]: 1,
-  });
-
   // Collect info about all the uniforms used by the program
   const uniformInfo = Array
     .from({ length: gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS) })
@@ -167,15 +147,13 @@ function createUniformSetters(gl, program) {
     .filter(info => info !== undefined);
 
   const textureTypes = [gl.SAMPLER_2D, gl.SAMPLER_CUBE];
-  var textureUnit = 0;
+  let textureUnit = 0;
 
   return uniformInfo.reduce((d, info) => {
-    let { name, type, size } = info;
-    let isArray = name.endsWith("[0]");
-    let key = isArray ? name.slice(0, -3) : name;
+    const { name, type, size } = info;
+    const isArray = name.endsWith("[0]");
+    const key = isArray ? name.slice(0, -3) : name;
 
-    //let setter = createUniformSetter(gl, program, info, textureUnit);
-    //d[key] = wrapSetter(setter, isArray, type, size);
     d[key] = createUniformSetter(gl, program, info, textureUnit);
 
     if (textureTypes.includes(type)) textureUnit += size;
@@ -263,7 +241,7 @@ function loadShader(gl, type, source) {
   gl.compileShader(shader);
 
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    let log = gl.getShaderInfoLog(shader);
+    const log = gl.getShaderInfoLog(shader);
     gl.deleteShader(shader);
     fail("An error occured compiling the shader", log);
   }
@@ -340,9 +318,9 @@ function initMipMapper(gl, target) {
 
 function setupAnisotropy(gl, target) {
   const ext = (
-    gl.getExtension('EXT_texture_filter_anisotropic') ||
-    gl.getExtension('MOZ_EXT_texture_filter_anisotropic') || 
-    gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+    gl.getExtension("EXT_texture_filter_anisotropic") ||
+    gl.getExtension("MOZ_EXT_texture_filter_anisotropic") ||
+    gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic")
   );
   if (!ext) return () => undefined;
 
@@ -373,8 +351,8 @@ function initTextureMethods(gl) {
     } = options;
 
     // For Image input, get size from element. Otherwise it must be supplied
-    const { 
-      width = 1, 
+    const {
+      width = 1,
       height = 1,
     } = (image) ? image : options;
 
@@ -453,7 +431,7 @@ function initContext(gl) {
 
   function bindFramebufferAndSetViewport(options = {}) {
     const { buffer = null, size = gl.canvas } = options;
-    let { width, height } = size;
+    const { width, height } = size;
     gl.bindFramebuffer(gl.FRAMEBUFFER, buffer);
     gl.viewport(0, 0, width, height);
   }
@@ -466,7 +444,7 @@ function initContext(gl) {
 
   function clipRect(x, y, width, height) {
     gl.enable(gl.SCISSOR_TEST);
-    let roundedArgs = [x, y, width, height].map(Math.round);
+    const roundedArgs = [x, y, width, height].map(Math.round);
     gl.scissor(...roundedArgs);
   }
 
@@ -474,7 +452,7 @@ function initContext(gl) {
     const mode = gl.TRIANGLES;
     gl.bindVertexArray(vao);
     if (indices) {
-      let { type, offset } = indices;
+      const { type, offset } = indices;
       gl.drawElementsInstanced(mode, count, type, offset, instanceCount);
     } else {
       gl.drawArraysInstanced(mode, 0, count, instanceCount);
@@ -488,8 +466,8 @@ function initView(porthole, fieldOfView) {
   // fieldOfView is the vertical view angle range in degrees (floating point)
 
   // Compute values for transformation between the 3D world and the 2D porthole
-  var portRect, width, height, aspect;
-  var tanFOV = Math.tan(fieldOfView * Math.PI / 180.0 / 2.0);
+  let portRect, width, height, aspect;
+  const tanFOV = Math.tan(fieldOfView * Math.PI / 180.0 / 2.0);
   const maxRay = [];
 
   computeRayParams(); // Set initial values
@@ -509,8 +487,8 @@ function initView(porthole, fieldOfView) {
   function computeRayParams() {
     // Compute porthole size
     portRect = porthole.getBoundingClientRect();
-    let newWidth = portRect.right - portRect.left;
-    let newHeight = portRect.bottom - portRect.top;
+    const newWidth = portRect.right - portRect.left;
+    const newHeight = portRect.bottom - portRect.top;
 
     // Exit if no change
     if (width === newWidth && height === newHeight) return false;
@@ -534,21 +512,21 @@ function initView(porthole, fieldOfView) {
     // when the mouse is at the left top pixel in the box.
     // rect.right and .bottom are NOT equal to clientX/Y at the bottom
     // right pixel -- they are one more than the clientX/Y values.
-    // Thus the number of pixels in the box is given by 
+    // Thus the number of pixels in the box is given by
     //    porthole.clientWidth = rect.right - rect.left  (NO +1 !!)
-    var x = clientX - portRect.left;
-    var y = portRect.bottom - clientY - 1; // Flip sign to make +y upward
+    const x = clientX - portRect.left;
+    const y = portRect.bottom - clientY - 1; // Flip sign to make +y upward
 
     // Normalized distances from center of box. We normalize by pixel DISTANCE
     // rather than pixel count, to ensure we get -1 and +1 at the ends.
     // (Confirm by considering the 2x2 case)
-    var xratio = 2 * x / (width - 1) - 1;
-    var yratio = 2 * y / (height - 1) -1;
+    const xratio = 2 * x / (width - 1) - 1;
+    const yratio = 2 * y / (height - 1) - 1;
 
     rayVec[0] = xratio * maxRay[0];
     rayVec[1] = yratio * maxRay[1];
-    //rayVec[2] = -1.0;
-    //rayVec[3] = 0.0;
+    // rayVec[2] = -1.0;
+    // rayVec[3] = 0.0;
     return;
   }
 }
@@ -560,7 +538,7 @@ function initViewport(display, porthole) {
   // Inputs are HTML elements whose boundingClientRects match the background
   // canvas (display) and the desired area for rendering the scene (porthole)
 
-  var portRect, dispRect;
+  let portRect, dispRect;
   const viewport = {};
 
   setViewport(); // Set initial values
@@ -569,7 +547,7 @@ function initViewport(display, porthole) {
     element: porthole, // Back-reference
     viewport,
     changed: setViewport,
-  }
+  };
 
   function setViewport() {
     // Update rectangles. boundingClientRect is relative to browser window
@@ -579,11 +557,11 @@ function initViewport(display, porthole) {
     // Compute relative position of porthole vs display
     // Note flipped sign of Y! getBoundingClientRect increases downward, but
     // for WebGL we want Y increasing upward
-    let bottom = dispRect.bottom - portRect.bottom;
-    let left = portRect.left - dispRect.left;
+    const bottom = dispRect.bottom - portRect.bottom;
+    const left = portRect.left - dispRect.left;
     // Compute porthole size
-    let width = portRect.right - portRect.left;
-    let height = portRect.bottom - portRect.top;
+    const width = portRect.right - portRect.left;
+    const height = portRect.bottom - portRect.top;
 
     // Exit if no change
     if (viewport.left === left && viewport.bottom === bottom &&

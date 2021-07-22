@@ -8,7 +8,7 @@ export function createUniformSetters(gl, program) {
     .filter(info => info !== undefined);
 
   const textureTypes = [gl.SAMPLER_2D, gl.SAMPLER_CUBE];
-  var textureUnit = 0;
+  let textureUnit = 0;
 
   return uniformInfo.reduce((d, info) => {
     const { name, type, size } = info;
