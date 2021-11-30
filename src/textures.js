@@ -20,10 +20,7 @@ export function initTextureMethods(gl) {
     } = options;
 
     // For Image input, get size from element. Otherwise it must be supplied
-    const {
-      width = 1,
-      height = 1,
-    } = (image) ? image : options;
+    const { width = 1, height = 1 } = (image) ? image : options;
 
     const texture = gl.createTexture();
     gl.bindTexture(target, texture);
@@ -39,7 +36,7 @@ export function initTextureMethods(gl) {
         width, height, border, format, type, data);
     }
 
-    getMips({ mips, width, height });
+    getMips({ mips });
 
     return texture;
   }

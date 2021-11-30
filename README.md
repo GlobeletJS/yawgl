@@ -38,6 +38,7 @@ them yet, your best options are to either:
 - Document API, especially initContext method
 - Check tile-gl for possible new functionality
 - Consider optional change-tracking to avoid repeat uniform setting
+- Implement handling for Uniform Buffer Objects
 
 [WebGL Fundamentals]: https://webglfundamentals.org/
 [greggman's module]: https://github.com/greggman/webgl-fundamentals/blob/master/webgl/resources/webgl-utils.js

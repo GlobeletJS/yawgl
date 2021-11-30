@@ -1,17 +1,26 @@
 import { initProgram } from "./program.js";
 import { initAttributeMethods } from "./attributes.js";
 import { initTextureMethods } from "./textures.js";
+import { resizeCanvasToDisplaySize } from "./resize-canvas.js";
 
-export function initContext(gl) {
-  // Input is an extended WebGL context, as created by yawgl.getExtendedContext
-  const canvas = gl.canvas;
+export function initContext(arg) {
+  const argType =
+    (arg instanceof WebGL2RenderingContext) ? "context" :
+    (arg instanceof HTMLCanvasElement) ? "canvas" :
+    "unknown";
+  if (argType === "unknown") throw "yawgl initContext: arg must be either " +
+    "a HTMLCanvasElement or a WebGL2RenderingContext";
+
+  const canvas = (argType === "canvas") ? arg : arg.canvas;
+  const gl = (argType === "context") ? arg : arg.getContext("webgl2");
+
   gl.disable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
   const api = { gl,
     initProgram: (vert, frag) => initProgram(gl, vert, frag),
-    resizeCanvasToDisplaySize,
+    resizeCanvasToDisplaySize: (s) => resizeCanvasToDisplaySize(canvas, s),
     bindFramebufferAndSetViewport,
     clear,
     clipRect,
@@ -19,19 +28,6 @@ export function initContext(gl) {
   };
 
   return Object.assign(api, initAttributeMethods(gl), initTextureMethods(gl));
-
-  function resizeCanvasToDisplaySize(multiplier) {
-    if (!multiplier || multiplier < 0) multiplier = 1;
-
-    const width = Math.floor(canvas.clientWidth * multiplier);
-    const height = Math.floor(canvas.clientHeight * multiplier);
-
-    if (canvas.width === width && canvas.height === height) return false;
-
-    canvas.width = width;
-    canvas.height = height;
-    return true;
-  }
 
   function bindFramebufferAndSetViewport(options = {}) {
     const { buffer = null, size = gl.canvas } = options;

@@ -1,4 +1,3 @@
-export { getExtendedContext } from "./extensions.js";
 export { initContext        } from "./context.js";
 export { initProgram        } from "./program.js";
 
