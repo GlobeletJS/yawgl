@@ -1,70 +1,3 @@
-function getExtendedContext(canvas) {
-  const haveCanvas = canvas instanceof Element;
-  if (!haveCanvas || canvas.tagName.toLowerCase() !== "canvas") {
-    throw Error("ERROR in yawgl.getExtendedContext: not a valid Canvas!");
-  }
-  const gl = canvas.getContext("webgl");
-
-  // developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
-  //   #Take_advantage_of_universally_supported_WebGL_1_extensions
-  const universalExtensions = [
-    "ANGLE_instanced_arrays",
-    "EXT_blend_minmax",
-    "OES_element_index_uint",
-    "OES_standard_derivatives",
-    "OES_vertex_array_object",
-    "WEBGL_debug_renderer_info",
-    "WEBGL_lose_context"
-  ];
-  universalExtensions.forEach(ext => getAndApplyExtension(gl, ext));
-
-  // Modify the shaderSource method to add a preamble
-  const SHADER_PREAMBLE = `
-#extension GL_OES_standard_derivatives : enable
-#line 1
-`;
-  const shaderSource = gl.shaderSource;
-  gl.shaderSource = function(shader, source) {
-    const modified = (source.indexOf("GL_OES_standard_derivatives") < 0)
-      ? SHADER_PREAMBLE + source
-      : source;
-    shaderSource.call(gl, shader, modified);
-  };
-
-  return gl;
-}
-
-function getAndApplyExtension(gl, name) {
-  // https://webgl2fundamentals.org/webgl/lessons/webgl1-to-webgl2.html
-  const ext = gl.getExtension(name);
-  if (!ext) return console.log("yawgl: extension " + name + " not supported!");
-
-  const fnSuffix = name.split("_")[0];
-  const enumSuffix = "_" + fnSuffix;
-
-  for (const key in ext) {
-    const value = ext[key];
-    const isFunc = typeof value === "function";
-    const suffix = isFunc ? fnSuffix : enumSuffix;
-    const glKey = (key.endsWith(suffix))
-      ? key.substring(0, key.length - suffix.length)
-      : key;
-    if (gl[glKey] !== undefined) {
-      if (!isFunc && gl[glKey] !== value) {
-        console.warn("conflict:", name, gl[glKey], value, key);
-      }
-    } else if (isFunc) {
-      gl[glKey] = (function(origFn) {
-        return function() {
-          return origFn.apply(ext, arguments);
-        };
-      })(value);
-    } else {
-      gl[glKey] = value;
-    }
-  }
-}
-
 function createUniformSetter(gl, program, info, textureUnit) {
   const { name, type, size } = info;
   const isArray = name.endsWith("[0]");
@@ -301,27 +234,21 @@ function initAttributeMethods(gl) {
 }
 
 function initMipMapper(gl, target) {
-  const isPowerOf2 = (v) => Math.log2(v) % 1 == 0;
   const setAnisotropy = setupAnisotropy(gl, target);
 
-  return function({ mips = true, width, height }) {
-    if (mips && isPowerOf2(width) && isPowerOf2(height)) {
+  return function({ mips = true }) {
+    if (mips) {
       setAnisotropy();
       gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
       gl.generateMipmap(target);
     } else {
-      // WebGL1 can't handle mipmapping for non-power-of-2 images
       gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     }
   };
 }
 
 function setupAnisotropy(gl, target) {
-  const ext = (
-    gl.getExtension("EXT_texture_filter_anisotropic") ||
-    gl.getExtension("MOZ_EXT_texture_filter_anisotropic") ||
-    gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic")
-  );
+  const ext = gl.getExtension("EXT_texture_filter_anisotropic");
   if (!ext) return () => undefined;
 
   const maxAnisotropy = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
@@ -351,10 +278,7 @@ function initTextureMethods(gl) {
     } = options;
 
     // For Image input, get size from element. Otherwise it must be supplied
-    const {
-      width = 1,
-      height = 1,
-    } = (image) ? image : options;
+    const { width = 1, height = 1 } = (image) ? image : options;
 
     const texture = gl.createTexture();
     gl.bindTexture(target, texture);
@@ -370,7 +294,7 @@ function initTextureMethods(gl) {
         width, height, border, format, type, data);
     }
 
-    getMips({ mips, width, height });
+    getMips({ mips });
 
     return texture;
   }
@@ -398,16 +322,43 @@ function initTextureMethods(gl) {
   }
 }
 
-function initContext(gl) {
-  // Input is an extended WebGL context, as created by yawgl.getExtendedContext
-  const canvas = gl.canvas;
+function resizeCanvasToDisplaySize(canvas, multiplier) {
+  // Make sure the canvas drawingbuffer is the same size as the display
+  // webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+
+  // multiplier allows scaling. Example: multiplier = window.devicePixelRatio
+  if (!multiplier || multiplier < 0) multiplier = 1;
+
+  const width = Math.floor(canvas.clientWidth * multiplier);
+  const height = Math.floor(canvas.clientHeight * multiplier);
+
+  // Exit if no change
+  if (canvas.width === width && canvas.height === height) return false;
+
+  // Resize drawingbuffer to match resized display
+  canvas.width = width;
+  canvas.height = height;
+  return true;
+}
+
+function initContext(arg) {
+  const argType =
+    (arg instanceof WebGL2RenderingContext) ? "context" :
+    (arg instanceof HTMLCanvasElement) ? "canvas" :
+    "unknown";
+  if (argType === "unknown") throw "yawgl initContext: arg must be either " +
+    "a HTMLCanvasElement or a WebGL2RenderingContext";
+
+  const canvas = (argType === "canvas") ? arg : arg.canvas;
+  const gl = (argType === "context") ? arg : arg.getContext("webgl2");
+
   gl.disable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
   const api = { gl,
     initProgram: (vert, frag) => initProgram(gl, vert, frag),
-    resizeCanvasToDisplaySize,
+    resizeCanvasToDisplaySize: (s) => resizeCanvasToDisplaySize(canvas, s),
     bindFramebufferAndSetViewport,
     clear,
     clipRect,
@@ -415,19 +366,6 @@ function initContext(gl) {
   };
 
   return Object.assign(api, initAttributeMethods(gl), initTextureMethods(gl));
-
-  function resizeCanvasToDisplaySize(multiplier) {
-    if (!multiplier || multiplier < 0) multiplier = 1;
-
-    const width = Math.floor(canvas.clientWidth * multiplier);
-    const height = Math.floor(canvas.clientHeight * multiplier);
-
-    if (canvas.width === width && canvas.height === height) return false;
-
-    canvas.width = width;
-    canvas.height = height;
-    return true;
-  }
 
   function bindFramebufferAndSetViewport(options = {}) {
     const { buffer = null, size = gl.canvas } = options;
@@ -578,23 +516,4 @@ function initViewport(display, porthole) {
   }
 }
 
-function resizeCanvasToDisplaySize(canvas, multiplier) {
-  // Make sure the canvas drawingbuffer is the same size as the display
-  // webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-
-  // multiplier allows scaling. Example: multiplier = window.devicePixelRatio
-  if (!multiplier || multiplier < 0) multiplier = 1;
-
-  const width = Math.floor(canvas.clientWidth * multiplier);
-  const height = Math.floor(canvas.clientHeight * multiplier);
-
-  // Exit if no change
-  if (canvas.width === width && canvas.height === height) return false;
-
-  // Resize drawingbuffer to match resized display
-  canvas.width = width;
-  canvas.height = height;
-  return true;
-}
-
-export { getExtendedContext, initContext, initProgram, initView, initViewport, resizeCanvasToDisplaySize };
+export { initContext, initProgram, initView, initViewport, resizeCanvasToDisplaySize };
