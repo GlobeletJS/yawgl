@@ -11,7 +11,9 @@
   "directories": {},
   "scripts": {
     "lint": "eslint src",
-    "build": "rollup -c build/rollup.config.js",
+    "build-module": "rollup -c build/rollup.config.js",
+    "build-examples": "cd examples && rollup -c",
+    "build": "npm run build-module && npm run build-examples",
     "test": "npm run lint",
     "postversion": "git push && git push --tags"
   },
@@ -30,9 +32,9 @@
   },
   "homepage": "https://github.com/GlobeletJS/yawgl#readme",
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^13.0.6",
-    "eslint": "^8.3.0",
+    "@rollup/plugin-node-resolve": "^13.1.3",
+    "eslint": "^8.11.0",
     "eslint-config-globeletjs": "^0.0.6",
-    "rollup": "^2.60.1"
+    "rollup": "^2.70.0"
   }
 }
