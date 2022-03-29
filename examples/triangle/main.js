@@ -5,6 +5,8 @@ import frag from "./frag.glsl";
 export function main() {
   const context = initContext(document.getElementById("canvas"));
   context.resizeCanvasToDisplaySize();
+  context.gl.pixelStorei(context.gl.UNPACK_ALIGNMENT, 1);
+  context.gl.pixelStorei(context.gl.PACK_ALIGNMENT, 1);
 
   const program = context.initProgram(vert, frag);
 
@@ -24,6 +26,7 @@ export function main() {
 
   program.use();
   const vao = program.constructVao({ attributes, indices });
-  program.uniformSetters.fillStyle([1.0, 1.0, 0.0, 1.0]);
+  program.uniformSetters.fillColor([1.0, 1.0, 0.0, 1.0]);
+  program.uniformSetters.fillOpacity(0.75);
   context.draw({ vao, indices, count: 3 });
 }

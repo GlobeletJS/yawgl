@@ -2,7 +2,7 @@
 
 precision mediump float;
 
-uniform vec4 fillStyle;
+in vec4 fillStyle;
 
 out vec4 pixColor;
 
