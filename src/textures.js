@@ -23,6 +23,9 @@ export function initTextureMethods(gl) {
     const { width = 1, height = 1 } = (image) ? image : options;
 
     const texture = gl.createTexture();
+
+    // Work with first texture unit. Leave others unchanged (may be in use)
+    gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(target, texture);
 
     gl.texParameteri(target, gl.TEXTURE_WRAP_S, wrapS);

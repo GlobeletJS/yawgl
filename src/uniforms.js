@@ -8,7 +8,10 @@ export function createUniformSetters(gl, program) {
     .filter(info => info !== undefined);
 
   const textureTypes = [gl.SAMPLER_2D, gl.SAMPLER_CUBE];
-  let textureUnit = 0;
+  let textureUnit = 1; // Skip the first texture unit: used for initTexture
+
+  // Make sure program is active, in case we need to set texture units
+  gl.useProgram(program);
 
   return uniformInfo.reduce((d, info) => {
     const { name, type, size } = info;

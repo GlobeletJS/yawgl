@@ -53,8 +53,9 @@ function createUniformSetter(gl, program, info, textureUnit) {
   }
 
   function buildTextureSetter(bindPoint) {
+    gl.uniform1i(loc, textureUnit);
+
     return function(texture) {
-      gl.uniform1i(loc, textureUnit);
       gl.activeTexture(gl.TEXTURE0 + textureUnit);
       gl.bindTexture(bindPoint, texture);
     };
@@ -62,8 +63,9 @@ function createUniformSetter(gl, program, info, textureUnit) {
 
   function buildTextureArraySetter(bindPoint) {
     const units = Array.from(Array(size), () => textureUnit++);
+    gl.uniform1iv(loc, units);
+
     return function(textures) {
-      gl.uniform1iv(loc, units);
       textures.forEach((texture, i) => {
         gl.activeTexture(gl.TEXTURE0 + units[i]);
         gl.bindTexture(bindPoint, texture);
@@ -80,7 +82,10 @@ function createUniformSetters(gl, program) {
     .filter(info => info !== undefined);
 
   const textureTypes = [gl.SAMPLER_2D, gl.SAMPLER_CUBE];
-  let textureUnit = 0;
+  let textureUnit = 1; // Skip the first texture unit: used for initTexture
+
+  // Make sure program is active, in case we need to set texture units
+  gl.useProgram(program);
 
   return uniformInfo.reduce((d, info) => {
     const { name, type, size } = info;
@@ -281,6 +286,9 @@ function initTextureMethods(gl) {
     const { width = 1, height = 1 } = (image) ? image : options;
 
     const texture = gl.createTexture();
+
+    // Work with first texture unit. Leave others unchanged (may be in use)
+    gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(target, texture);
 
     gl.texParameteri(target, gl.TEXTURE_WRAP_S, wrapS);

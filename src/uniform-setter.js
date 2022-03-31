@@ -53,8 +53,9 @@ export function createUniformSetter(gl, program, info, textureUnit) {
   }
 
   function buildTextureSetter(bindPoint) {
+    gl.uniform1i(loc, textureUnit);
+
     return function(texture) {
-      gl.uniform1i(loc, textureUnit);
       gl.activeTexture(gl.TEXTURE0 + textureUnit);
       gl.bindTexture(bindPoint, texture);
     };
@@ -62,8 +63,9 @@ export function createUniformSetter(gl, program, info, textureUnit) {
 
   function buildTextureArraySetter(bindPoint) {
     const units = Array.from(Array(size), () => textureUnit++);
+    gl.uniform1iv(loc, units);
+
     return function(textures) {
-      gl.uniform1iv(loc, units);
       textures.forEach((texture, i) => {
         gl.activeTexture(gl.TEXTURE0 + units[i]);
         gl.bindTexture(bindPoint, texture);
