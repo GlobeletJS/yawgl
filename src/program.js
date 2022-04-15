@@ -29,6 +29,7 @@ function loadShader(gl, type, source) {
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     const log = gl.getShaderInfoLog(shader);
     gl.deleteShader(shader);
+    console.log("shader source = " + source);
     fail("An error occured compiling the shader", log);
   }
 
